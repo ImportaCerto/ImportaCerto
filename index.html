@@ -497,6 +497,27 @@ textarea{resize:vertical;min-height:52px;font-size:11px}
   window.__firestoreExcluirEstudo = async function(id){
     await deleteDoc(doc(db, ESTUDOS_COL, id));
   };
+
+  // ── Buscar alíquotas pelo NCM no Firestore ──────────────
+  window.__buscarNCM = async function(ncm8) {
+    try {
+      const ref  = doc(db, 'ncm_aliquotas', ncm8);
+      const snap = await getDoc(ref);
+      return snap.exists() ? snap.data() : null;
+    } catch(e) {
+      console.error('__buscarNCM:', e);
+      return null;
+    }
+  };
+
+  // ── Salvar lead especializado ───────────────────────────
+  window.__salvarLeadEspecializado = async function(lead) {
+    const uid = window.__currentUid;
+    if (!uid) throw new Error('Usuário não autenticado');
+    const ref = doc(collection(db, 'leads_especializados'));
+    await setDoc(ref, lead);
+    return ref.id;
+  };
 </script>
 
 
@@ -1810,47 +1831,61 @@ async function buscarPTAX() {
   if(!btn || !inp) return;
 
   btn.disabled = true;
-  btn.textContent = '⏳ Buscando…';
+  btn.textContent = '\u23f3 Buscando\u2026';
   if(info) info.textContent = '';
 
   try {
-    // Tentar hoje, se não retornar (feriado/fim de semana) recuar até 5 dias úteis
     var ptax = null;
     var dataUsada = '';
+
+    // Fonte 1: OData BCB (CORS liberado pelo banco central)
     for(var i = 0; i <= 5; i++) {
       var d = new Date();
       d.setDate(d.getDate() - i);
-      // Pular sábado (6) e domingo (0)
-      if(d.getDay() === 0) { d.setDate(d.getDate()-1); }
-      if(d.getDay() === 6) { d.setDate(d.getDate()-1); }
-      var mm = String(d.getMonth()+1).padStart(2,'0');
-      var dd = String(d.getDate()).padStart(2,'0');
+      if(d.getDay() === 0) d.setDate(d.getDate()-1);
+      if(d.getDay() === 6) d.setDate(d.getDate()-1);
+      var mm   = String(d.getMonth()+1).padStart(2,'0');
+      var dd2  = String(d.getDate()).padStart(2,'0');
       var yyyy = d.getFullYear();
-      var dataStr = mm+'-'+dd+'-'+yyyy; // formato MM-DD-YYYY da API BCB
-      var dataExib = dd+'/'+mm+'/'+yyyy;
+      var dataFmt  = mm+'-'+dd2+'-'+yyyy;
+      var dataExib = dd2+'/'+mm+'/'+yyyy;
+      try {
+        var url = 'https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/'
+          + 'CotacaoMoedaDia(moeda=@moeda,dataCotacao=@data)'
+          + '?@moeda='USD'&@data='' + dataFmt + '''
+          + '&$top=1&$orderby=dataHoraCotacao%20desc&$format=json&$select=cotacaoCompra,dataHoraCotacao';
+        var resp = await fetch(url);
+        if(!resp.ok) continue;
+        var json = await resp.json();
+        if(json.value && json.value.length > 0) {
+          ptax = json.value[0].cotacaoCompra;
+          dataUsada = dataExib + ' ' + (json.value[0].dataHoraCotacao||'').substring(11,16);
+          break;
+        }
+      } catch(e2) { continue; }
+    }
 
-      var url = 'https://ptax.bcb.gov.br/ptax_internet/api/v1/cotacaoMoedaDia/USD/'+dataStr;
-      var resp = await fetch(url);
-      if(!resp.ok) continue;
-      var json = await resp.json();
-      if(json.value && json.value.length > 0) {
-        // Pegar a última cotação do dia (compra)
-        var cot = json.value[json.value.length-1];
-        ptax = cot.cotacaoCompra;
-        dataUsada = dataExib + ' ' + (cot.dataHoraCotacao||'').substring(11,16);
-        break;
-      }
+    // Fonte 2: AwesomeAPI (fallback)
+    if(!ptax) {
+      try {
+        var r2 = await fetch('https://economia.awesomeapi.com.br/json/last/USD-BRL');
+        var j2 = await r2.json();
+        if(j2['USDBRL'] && j2['USDBRL'].bid) {
+          ptax = parseFloat(j2['USDBRL'].bid);
+          dataUsada = 'agora (AwesomeAPI)';
+        }
+      } catch(e3) {}
     }
 
     if(ptax) {
       inp.value = parseFloat(ptax).toFixed(4);
       if(info) {
-        info.textContent = '📡 PTAX compra em ' + dataUsada + ' — fonte: BCB';
+        info.textContent = '\ud83d\udce1 PTAX compra em ' + dataUsada + ' \u2014 fonte: BCB';
         info.style.color = '#0F6E56';
       }
     } else {
       if(info) {
-        info.textContent = 'PTAX indisponível no momento. Preencha manualmente.';
+        info.textContent = 'PTAX indispon\u00edvel no momento. Preencha manualmente.';
         info.style.color = '#791F1F';
       }
     }
