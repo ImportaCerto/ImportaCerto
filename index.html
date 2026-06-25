@@ -1022,7 +1022,7 @@ function addItem(cf){
       +'<div><label>Descri&#231;&#227;o do produto</label><input type="text" id="i_desc-'+id+'" placeholder="Ex: CBB61-450VAC Cables" value="'+(cf.desc||'')+'"></div>'
     +'</div>'
     +'<div class="g2">'
-      +'<div><label>NCM &nbsp;<a href="https://www.ncmweb.com.br" target="_blank" class="ncm-link">&#128279; Consultar F5 Comex</a></label>'
+      +'<div><label>NCM</label>'
         +'<input type="text" id="i_ncm-'+id+'" placeholder="Ex: 85322590" maxlength="10" value="'+(cf.ncm||'')+'" oninput="onNcmInput('+id+',this.value)">'        +'<div class="ncm-status" id="ncm-status-'+id+'"></div>'        +'<button class="ncm-fill-btn" id="ncm-fill-btn-'+id+'" onclick="preencherAliquotas('+id+')">✔ Preencher alíquotas automático</button>'        +'</div>'
       +'<div><label>Valor FOB (USD)</label><input type="number" id="i_fob-'+id+'" step="0.01" placeholder="0.00" value="'+(cf.fob||'')+'"></div>'
     +'</div>'
@@ -1040,13 +1040,14 @@ function addItem(cf){
           +'<option value="reducao"'+(cf.icmstp==='reducao'?' selected':'')+'">Redu&#231;&#227;o de Base &#8211; Conv. 52/91</option>'
         +'</select>'
       +'</div>'
-      +'<div id="i_icms_alerta-'+id+'" class="icms-alerta">'        +'\u26a0\ufe0f A aplica\u00e7\u00e3o de benef\u00edcios fiscais depende da an\u00e1lise da mercadoria, NCM, estado de destino e legisla\u00e7\u00e3o vigente. Recomenda-se valida\u00e7\u00e3o pr\u00e9via com especialista.'      +'</div>'      +'<div id="i_red_wrap-'+id+'" style="'+(cf.icmstp==='reducao'?'':'display:none')+'">'
+      +'<d+'<div id="i_red_wrap-'+id+'" style="'+(cf.icmstp==='reducao'?'':'display:none')+'">'
         +'<label>% Redu&#231;&#227;o <span style="font-size:10px;color:#aab3bd">(Ex: 8.80 ou 5.60)</span></label>'
         +'<input type="number" id="i_red-'+id+'" step="0.01" placeholder="Ex: 8.80" value="'+(cf.red||'')+'" oninput="atualizarDivisor('+id+')">'
         +'<small style="color:#3a9bd5;font-size:10px;display:block;margin-top:2px">Divisor: <strong id="i_div-'+id+'">&#8212;</strong></small>'
       +'</div>'
       +'<div><label>Quantidade de pe&#231;as</label><input type="number" id="i_qtd-'+id+'" step="1" min="1" placeholder="Ex: 1500" value="'+(cf.qtd||'')+'"></div>'
     +'</div>';
+    +'<div id="i_icms_alerta-'+id+'" class="icms-alerta" style="margin-top:8px">'+'⚠️ A aplicação de benefícios fiscais estaduais depende da análise da mercadoria, NCM, estado de destino e legislação vigente. Recomenda-se validação prévia com especialista.'+'</div>'
   document.getElementById('items-wrap').appendChild(d);
   toggleReducao(id);
 }
@@ -1856,7 +1857,7 @@ async function buscarPTAX() {
         if(!resp.ok) continue;
         var jdata = await resp.json();
         if(jdata.value && jdata.value.length > 0) {
-          ptax = jdata.value[0].cotacaoCompra;
+          ptax = jdata.value[0].cotacaoVenda;
           dataUsada = dataExib + ' ' + (jdata.value[0].dataHoraCotacao||'').substring(11,16);
           break;
         }
@@ -1875,7 +1876,2827 @@ async function buscarPTAX() {
     }
     if(ptax) {
       inp.value = parseFloat(ptax).toFixed(4);
-      if(info){ info.textContent = '\ud83d\udce1 PTAX compra em ' + dataUsada + ' \u2014 fonte: BCB'; info.style.color='#0F6E56'; }
+      if(info){ info.textContent = '\ud83d\udce1 PTAX venda em ' + dataUsada + ' \u2014 fonte: BCB'; info.style.color='#0F6E56'; }
+    } else {
+      if(info){ info.textContent = 'PTAX indispon\u00edvel. Preencha manualmente.'; info.style.color='#791F1F'; }
+    }
+  } catch(e) {
+    if(info){ info.textContent = 'Erro: '+e.message; info.style.color='#791F1F'; }
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '\ud83d\udce1 PTAX';
+  }
+}
+
+function abrirModalValidacao(){
+  document.getElementById('val-observacao').value='';
+  document.getElementById('validacao-form-area').style.display='block';
+  document.getElementById('validacao-sucesso').style.display='none';
+  document.getElementById('modal-validacao').classList.add('show');
+}
+function fecharModalValidacao(){
+  document.getElementById('modal-validacao').classList.remove('show');
+}
+
+async function enviarValidacao(){
+  var btn=document.getElementById('btn-enviar-analise');
+  btn.disabled=true;btn.textContent='Enviando…';
+
+  try{
+    // Montar dados do lead a partir do estudo atual
+    var obs=document.getElementById('val-observacao').value.trim();
+    var hoje=new Date().toISOString().split('T')[0];
+
+    // Gerar ID do estudo no padrão EVI-YYYY-NNNNN
+    var ano=new Date().getFullYear();
+    var rand=String(Math.floor(Math.random()*99999)).padStart(5,'0');
+    var estudoId='EVI-'+ano+'-'+rand;
+
+    // Coletar NCMs dos itens do formulário
+    var ncmList=[];
+    var itemEls=document.querySelectorAll('[id^="i_ncm-"]');
+    itemEls.forEach(function(el){if(el.value)ncmList.push(el.value);});
+
+    // Dados do usuário logado
+    var uid=window.__currentUser&&window.__currentUser.uid||'';
+    var email=window.__currentUser&&window.__currentUser.email||'';
+    var nome=window.__currentUser&&window.__currentUser.displayName||'';
+    var empresa=document.getElementById('f_imp')?document.getElementById('f_imp').value:'';
+    var fob=document.getElementById('f_frete')&&lastCalc?'USD '+lastCalc.totalFOB_USD.toFixed(2):'';
+    var cambio=document.getElementById('f_cambio')?document.getElementById('f_cambio').value:'';
+
+    var lead={
+      userId:uid,
+      estudoId:estudoId,
+      nome:nome,
+      empresa:empresa,
+      email:email,
+      whatsapp:'',
+      ncms:ncmList,
+      valorFob:fob,
+      cambio:cambio,
+      observacao:obs,
+      status:'Novo',
+      dataSolicitacao:hoje
+    };
+
+    // Salvar no Firestore – coleção leads_especializados
+    await window.__salvarLeadEspecializado(lead);
+
+    // Mostrar sucesso
+    document.getElementById('validacao-form-area').style.display='none';
+    document.getElementById('validacao-sucesso').style.display='block';
+  }catch(e){
+    alert('Ocorreu um erro ao enviar sua solicitação. Tente novamente.');
+    console.error(e);
+  }finally{
+    btn.disabled=false;btn.textContent='📩 Enviar para análise';
+  }
+}
+
+addItem();
+
+function __abrirUpgrade() {
+  // Por enquanto abre modal informativo; futuramente integrará Stripe/PagSeguro
+  alert('Em breve! O plano PRO do ImportaCerto estará disponível.\nEntre em contato: contato@importacerto.com.br');
+}
+</script>
+</body>
+</html'<label>NCM</label>'
+        +'<input type="text" id="i_ncm-'+id+'" placeholder="Ex: 85322590" maxlength="10" value="'+(cf.ncm||'')+'" oninput="onNcmInput('+id+',this.value)">'        +'<div class="ncm-status" id="ncm-status-'+id+'"></div>'        +'<button class="ncm-fill-btn" id="ncm-fill-btn-'+id+'" onclick="preencherAliquotas('+id+')">✔ Preencher alíquotas automático</button>'        +'</div>'
+      +'<div><label>Valor FOB (USD)</label><input type="number" id="i_fob-'+id+'" step="0.01" placeholder="0.00" value="'+(cf.fob||'')+'"></div>'
+    +'</div>'
+    +'<div class="g5">'
+      +'<div><label>II (%)</label><input type="number" id="i_ii-'+id+'" step="0.01" placeholder="0.00" value="'+(cf.ii||'')+'"></div>'
+      +'<div><label>IPI (%)</label><input type="number" id="i_ipi-'+id+'" step="0.01" placeholder="0.00" value="'+(cf.ipi||'')+'"></div>'
+      +'<div><label>PIS (%)</label><input type="number" id="i_pis-'+id+'" step="0.01" placeholder="0.00" value="'+(cf.pis||'')+'"></div>'
+      +'<div><label>COFINS (%)</label><input type="number" id="i_cof-'+id+'" step="0.01" placeholder="0.00" value="'+(cf.cof||'')+'"></div>'
+      +'<div><label>ICMS (%)</label><input type="number" id="i_icms-'+id+'" step="0.01" value="'+(cf.icms||'20')+'"></div>'
+    +'</div>'
+    +'<div class="g3">'
+      +'<div><label>Tipo ICMS</label>'
+        +'<select id="i_icmstp-'+id+'" onchange="toggleReducao('+id+')">'
+          +'<option value="normal"'+((!cf.icmstp||cf.icmstp==='normal')?' selected':'')+'">Normal (base cheia)</option>'
+          +'<option value="reducao"'+(cf.icmstp==='reducao'?' selected':'')+'">Redu&#231;&#227;o de Base &#8211; Conv. 52/91</option>'
+        +'</select>'
+      +'</div>'
+      +'<d+'<div id="i_red_wrap-'+id+'" style="'+(cf.icmstp==='reducao'?'':'display:none')+'">'
+        +'<label>% Redu&#231;&#227;o <span style="font-size:10px;color:#aab3bd">(Ex: 8.80 ou 5.60)</span></label>'
+        +'<input type="number" id="i_red-'+id+'" step="0.01" placeholder="Ex: 8.80" value="'+(cf.red||'')+'" oninput="atualizarDivisor('+id+')">'
+        +'<small style="color:#3a9bd5;font-size:10px;display:block;margin-top:2px">Divisor: <strong id="i_div-'+id+'">&#8212;</strong></small>'
+      +'</div>'
+      +'<div><label>Quantidade de pe&#231;as</label><input type="number" id="i_qtd-'+id+'" step="1" min="1" placeholder="Ex: 1500" value="'+(cf.qtd||'')+'"></div>'
+    +'</div>';
+    +'<div id="i_icms_alerta-'+id+'" class="icms-alerta" style="margin-top:8px">'+'⚠️ A aplicação de benefícios fiscais estaduais depende da análise da mercadoria, NCM, estado de destino e legislação vigente. Recomenda-se validação prévia com especialista.'+'</div>'
+  document.getElementById('items-wrap').appendChild(d);
+  toggleReducao(id);
+}
+function remItem(id){items=items.filter(function(x){return x!==id;});var el=document.getElementById('itm-'+id);if(el)el.remove();}
+function duplicarItem(id){
+  addItem({inv:gs('i_inv-'+id),desc:gs('i_desc-'+id),ncm:gs('i_ncm-'+id),
+    fob:gs('i_fob-'+id),ii:gs('i_ii-'+id),ipi:gs('i_ipi-'+id),
+    pis:gs('i_pis-'+id),cof:gs('i_cof-'+id),icms:gs('i_icms-'+id),
+    qtd:gs('i_qtd-'+id),red:gs('i_red-'+id),
+    icmstp:document.getElementById('i_icmstp-'+id)?document.getElementById('i_icmstp-'+id).value:'normal'});
+}
+function addExtra(nom,val){
+  extraCount++;var eid=extraCount;extraIds.push(eid);
+  var d=document.createElement('div');d.className='desp-extra-row';d.id='ext-'+eid;
+  d.innerHTML='<input type="text" id="ex_nom-'+eid+'" placeholder="Ex: Assessoria Aduaneira" value="'+(nom||'')+'">'
+    +'<input type="number" id="ex_val-'+eid+'" step="0.01" placeholder="0.00" style="max-width:140px" value="'+(val||val===0?val:'')+'">'
+    +'<button class="rm-extra" onclick="remExtra('+eid+')">&#215;</button>';
+  document.getElementById('extras-wrap').appendChild(d);
+}
+function remExtra(eid){extraIds=extraIds.filter(function(x){return x!==eid;});var el=document.getElementById('ext-'+eid);if(el)el.remove();}
+
+async function calcular(){
+  if(!items.length){alert('Adicione pelo menos um item.');return;}
+
+  // ── Verificar limite de estudos ──
+  try {
+    await window.__verificarLimiteEstudos();
+  } catch(e) {
+    if(e.message && e.message.startsWith('LIMITE_ATINGIDO')) {
+      const [,plano,usados,limite] = e.message.split(':');
+      const msg = document.getElementById('limite-msg');
+      if(msg) msg.textContent = `Limite do plano ${plano.toUpperCase()} atingido: ${usados}/${limite} estudos este mês.`;
+      document.getElementById('limite-banner').style.display = 'block';
+      window.scrollTo({top:0,behavior:'smooth'});
+      return;
+    }
+    // Se não houver doc de usuário (conta antiga), deixa passar
+  }
+  var cambio=gv('f_cambio'),freteUSD=gv('f_frete');
+  if(!cambio||!freteUSD){alert('Preencha taxa cambial e frete total.');return;}
+  var adicoes=parseInt(document.getElementById('f_adicoes').value)||1;
+  var sisTotal=getSiscomex(adicoes);
+  var totalFOB_USD=0;
+  items.forEach(function(id){totalFOB_USD+=gv('i_fob-'+id);});
+  var freteBRL=freteUSD*cambio;
+  var qtdTotal=gv('f_qtd')||1;
+  var hoje=new Date().toLocaleDateString('pt-BR');
+  var modal=document.getElementById('f_modal')?document.getElementById('f_modal').value:'maritimo';
+  var afrmmTotal=modal==='aereo'?0:(freteUSD*cambio*0.08+20);
+  var totalCIF_all=(totalFOB_USD+freteUSD)*cambio;
+
+  var itemData=items.map(function(id){
+    var fobUSD=gv('i_fob-'+id);
+    var fpUSD=totalFOB_USD>0?(fobUSD/totalFOB_USD)*freteUSD:0;
+    var fpBRL=fpUSD*cambio;
+    var cifUSD=fobUSD+fpUSD;
+    var cifBRL=cifUSD*cambio;
+    var fobBRL=fobUSD*cambio;
+    var afrmmItem=totalCIF_all>0?(cifBRL/totalCIF_all)*afrmmTotal:afrmmTotal;
+    var sisItem=totalCIF_all>0?(cifBRL/totalCIF_all)*sisTotal:sisTotal;
+    var iiA=gv('i_ii-'+id)/100,ipiA=gv('i_ipi-'+id)/100;
+    var pisA=gv('i_pis-'+id)/100,cofA=gv('i_cof-'+id)/100;
+    var icmsA=gv('i_icms-'+id)/100;
+    var icmsTP=document.getElementById('i_icmstp-'+id)?document.getElementById('i_icmstp-'+id).value:'normal';
+    var qtdItem=gv('i_qtd-'+id)||0;
+    var ii=cifBRL*iiA,ipi=(cifBRL+ii)*ipiA,pis=cifBRL*pisA,cofins=cifBRL*cofA;
+    var redPct=gv('i_red-'+id);
+    var icms=0;
+    if(icmsTP==='reducao'&&redPct>0){
+      var divisor=(100-redPct)/100;
+      icms=((cifBRL+ii+ipi+pis+cofins+afrmmItem+sisItem)/divisor)*icmsA;
+    }else{
+      icms=((cifBRL+ii+ipi+pis+cofins+afrmmItem+sisItem)/(1-icmsA))*icmsA;
+    }
+    var totalImp=ii+ipi+pis+cofins+sisItem+icms+afrmmItem;
+    return{id:id,desc:gs('i_desc-'+id)||'—',ncm:gs('i_ncm-'+id)||'—',inv:gs('i_inv-'+id)||'—',
+      fobUSD:fobUSD,fpUSD:fpUSD,cifUSD:cifUSD,fobBRL:fobBRL,fpBRL:fpBRL,cifBRL:cifBRL,
+      iiA:iiA,ipiA:ipiA,pisA:pisA,cofA:cofA,icmsA:icmsA,icmsTP:icmsTP,redPct:redPct,qtdItem:qtdItem,
+      ii:ii,ipi:ipi,pis:pis,cofins:cofins,icms:icms,afrmmItem:afrmmItem,sisItem:sisItem,totalImp:totalImp};
+  });
+
+  var totalFOB_BRL=0,totalCIF_BRL=0,totalImpAll=0;
+  itemData.forEach(function(x){totalFOB_BRL+=x.fobBRL;totalCIF_BRL+=x.cifBRL;totalImpAll+=x.totalImp;});
+
+  var d_frete=freteBRL,d_taxas=gv('d_taxas'),d_port=gv('d_port');
+  var d_rod=gv('d_rod'),d_hon=gv('d_hon'),d_out=gv('d_out');
+  var totalExtras=0,extrasData=[];
+  extraIds.forEach(function(eid){
+    var nom=gs('ex_nom-'+eid)||'Despesa extra';
+    var val=gv('ex_val-'+eid);
+    totalExtras+=val;extrasData.push({nom:nom,val:val});
+  });
+  var totalDesp=d_frete+d_taxas+d_port+d_rod+d_hon+d_out+totalExtras;
+  var grandTotal=totalImpAll+totalDesp;
+  var unitarioGeral=grandTotal/(qtdTotal||1);
+  document.getElementById('d_frete').value=freteBRL.toFixed(2);
+
+  var despList=[
+    {nom:'Frete Internacional',val:d_frete},
+    {nom:'Taxas locais de frete',val:d_taxas},
+    {nom:'Servi&#231;o portu&#225;rio',val:d_port},
+    {nom:'Transporte rodovi&#225;rio',val:d_rod},
+    {nom:'Honor&#225;rios / Serv. Aduaneiro',val:d_hon},
+    {nom:'Outras despesas',val:d_out}
+  ];
+  extrasData.forEach(function(e){despList.push({nom:e.nom,val:e.val});});
+
+  // IDENT
+  document.getElementById('res-ident').innerHTML=
+    '<tr><td class="lk">IMPORTADOR:</td><td>'+gs('f_imp')+'</td><td class="sep"></td><td class="key">TAXA C&Acirc;MBIO</td><td class="val">R$ '+cambio.toFixed(4)+'</td></tr>'
+    +'<tr><td class="lk">EXPORTADOR:</td><td>'+gs('f_exp')+'</td><td class="sep"></td><td class="key">QUANTIDADE TOTAL</td><td class="val">'+qtdTotal+'</td></tr>'
+    +'<tr><td class="lk">PRODUTO:</td><td>'+gs('f_prod')+'</td><td class="sep"></td><td class="key">VMLE (R$)</td><td class="val" style="font-weight:700">'+fR(totalFOB_BRL)+'</td></tr>'
+    +'<tr><td class="lk">PORTO ORIGEM:</td><td>'+gs('f_porig')+'</td><td class="sep"></td><td class="key">TOTAL FOB (USD)</td><td class="val">'+fU(totalFOB_USD)+'</td></tr>'
+    +'<tr><td class="lk">PORTO DESTINO:</td><td>'+gs('f_pdest')+'</td><td class="sep"></td><td class="key">FRETE (USD)</td><td class="val">'+fU(freteUSD)+'</td></tr>'
+    +'<tr><td class="lk">INVOICE(S):</td><td>'+gs('f_inv')+'</td><td class="sep"></td><td class="key">VALOR ADUANEIRO (R$)</td><td class="val" style="font-weight:700">'+fR(totalCIF_BRL)+'</td></tr>'
+    +'<tr><td class="lk">SISCOMEX:</td><td>'+adicoes+' adi&#231;&#245;es</td><td class="sep"></td><td class="key">TAXA SISCOMEX (R$)</td><td class="val" style="font-weight:700">'+fR(sisTotal)+'</td></tr>'
+    +'<tr><td class="lk">MODAL:</td><td>'+(modal==='aereo'?'A&#233;reo':'Mar&#237;timo')+'</td><td class="sep"></td><td class="key">AFRMM (R$)</td><td class="val" style="font-weight:700">'+(modal==='aereo'?'N&#227;o aplic&#225;vel':fR(afrmmTotal))+'</td></tr>';
+
+  // RATEIO
+  var rt='<thead><tr>'
+    +'<th class="L">Invoice</th><th class="L">Descri&ccedil;&atilde;o</th><th class="L">NCM</th>'
+    +'<th>FOB (USD)</th><th>FOB (R$)</th><th>Frete Rat. (USD)</th><th>Frete Rat. (R$)</th><th>Valor Aduaneiro (R$)</th>'
+    +'</tr></thead><tbody>';
+  itemData.forEach(function(x){
+    rt+='<tr><td class="L">'+x.inv+'</td><td class="L">'+x.desc+'</td><td class="L">'+x.ncm+'</td>'
+      +'<td>'+fU(x.fobUSD)+'</td><td>'+fR(x.fobBRL)+'</td><td>'+fU(x.fpUSD)+'</td><td>'+fR(x.fpBRL)+'</td>'
+      +'<td style="font-weight:700">'+fR(x.cifBRL)+'</td></tr>';
+  });
+  rt+='<tr class="ttr"><td class="L" colspan="3">TOTAL</td>'
+    +'<td>'+fU(totalFOB_USD)+'</td><td>'+fR(totalFOB_BRL)+'</td>'
+    +'<td>'+fU(freteUSD)+'</td><td>'+fR(freteBRL)+'</td><td>'+fR(totalCIF_BRL)+'</td>'
+    +'</tr></tbody>';
+  document.getElementById('rtable').innerHTML=rt;
+
+  // IMPOSTOS POR ITEM
+  var impHtml='';
+  itemData.forEach(function(x){
+    var icmsLabel='ICMS';
+    if(x.icmsTP==='reducao'&&x.redPct>0){
+      var divLabel=((100-x.redPct)/100).toFixed(4);
+      icmsLabel='ICMS (Redu&ccedil;&atilde;o '+x.redPct.toFixed(2).replace('.',',')+
+        '% &ndash; divisor '+divLabel+')';
+    }
+    impHtml+='<div class="tax-block">'
+      +'<div class="tax-title">NCM: '+x.ncm+' &mdash; '+x.desc+' &nbsp;|&nbsp; Valor Aduaneiro: '+fR(x.cifBRL)+'</div>'
+      +'<div class="tax-body">'
+        +'<div class="trow"><span class="lbl">Imposto de Importa&ccedil;&atilde;o<span class="aliq">'+fp(x.iiA)+'</span></span><span class="val">'+fR(x.ii)+'</span></div>'
+        +'<div class="trow"><span class="lbl">I.P.I.<span class="aliq">'+fp(x.ipiA)+'</span></span><span class="val">'+fR(x.ipi)+'</span></div>'
+        +'<div class="trow"><span class="lbl">PIS<span class="aliq">'+fp(x.pisA)+'</span></span><span class="val">'+fR(x.pis)+'</span></div>'
+        +'<div class="trow"><span class="lbl">COFINS<span class="aliq">'+fp(x.cofA)+'</span></span><span class="val">'+fR(x.cofins)+'</span></div>'
+        +'<div class="trow"><span class="lbl">Taxa Siscomex (rateado pelo CIF)<span class="aliq">proporcional</span></span><span class="val">'+fR(x.sisItem)+'</span></div>'
+        +'<div class="trow"><span class="lbl">AFRMM<span class="aliq">'+(modal==='aereo'?'N&atilde;o aplic&aacute;vel (modal a&eacute;reo)':'Frete&times;C&acirc;mbio&times;8%+R$20 rateado')+'</span></span><span class="val">'+fR(x.afrmmItem)+'</span></div>'
+        +'<div class="trow"><span class="lbl">'+icmsLabel+'<span class="aliq">'+fp(x.icmsA)+'</span></span><span class="val">'+fR(x.icms)+'</span></div>'
+        +'<div class="tsub"><span>Subtotal impostos &#8212; '+x.inv+' / NCM '+x.ncm+'</span><span>'+fR(x.totalImp)+'</span></div>'
+      +'</div></div>';
+  });
+  document.getElementById('imp-wrap').innerHTML=impHtml;
+
+  // BLOCO CONSOLIDADO PARA IMPRESSAO (soma de todos os itens em um unico bloco)
+  (function(){
+    var totII=0,totIPI=0,totPIS=0,totCOF=0,totSIS=0,totAFR=0,totICMS=0,totIMP=0;
+    var totCIF=0;
+    itemData.forEach(function(x){
+      totII+=x.ii;totIPI+=x.ipi;totPIS+=x.pis;totCOF+=x.cofins;
+      totSIS+=x.sisItem;totAFR+=x.afrmmItem;totICMS+=x.icms;totIMP+=x.totalImp;
+      totCIF+=x.cifBRL;
+    });
+    var printHtml='<div class="tax-block">'      +'<div class="tax-title">Valor Aduaneiro Total: '+fR(totCIF)+'</div>'      +'<div class="tax-body">'        +'<div class="trow"><span class="lbl">Imposto de Importa&ccedil;&atilde;o</span><span class="val">'+fR(totII)+'</span></div>'        +'<div class="trow"><span class="lbl">I.P.I.</span><span class="val">'+fR(totIPI)+'</span></div>'        +'<div class="trow"><span class="lbl">PIS</span><span class="val">'+fR(totPIS)+'</span></div>'        +'<div class="trow"><span class="lbl">COFINS</span><span class="val">'+fR(totCOF)+'</span></div>'        +'<div class="trow"><span class="lbl">Taxa Siscomex</span><span class="val">'+fR(totSIS)+'</span></div>'        +'<div class="trow"><span class="lbl">AFRMM<span class="aliq">'+(modal==='aereo'?'N&atilde;o aplic&aacute;vel (modal a&eacute;reo)':'Frete&times;C&acirc;mbio&times;8%+R$20 rateado')+'</span></span><span class="val">'+fR(totAFR)+'</span></div>'        +'<div class="trow"><span class="lbl">ICMS</span><span class="val">'+fR(totICMS)+'</span></div>'        +'<div class="tsub"><span>Subtotal impostos</span><span>'+fR(totIMP)+'</span></div>'      +'</div></div>';
+    document.getElementById('imp-wrap-print').innerHTML=printHtml;
+  })();
+
+  // IMPOSTO TOTAL POR NCM (ordem de inserção; só exibe quando há >1 NCM distinto)
+  var ncmOrder=[],ncmMap={};
+  itemData.forEach(function(x){
+    if(!ncmMap[x.ncm]){ncmOrder.push(x.ncm);ncmMap[x.ncm]={ncm:x.ncm,desc:x.desc,total:0,ii:0,ipi:0,pis:0,cofins:0,icms:0,afrmm:0,sis:0};}
+    ncmMap[x.ncm].total+=x.totalImp;ncmMap[x.ncm].ii+=x.ii;ncmMap[x.ncm].ipi+=x.ipi;
+    ncmMap[x.ncm].pis+=x.pis;ncmMap[x.ncm].cofins+=x.cofins;
+    ncmMap[x.ncm].icms+=x.icms;ncmMap[x.ncm].afrmm+=x.afrmmItem;ncmMap[x.ncm].sis+=x.sisItem;
+  });
+  var secNcm=document.getElementById('sec-ncm-total');
+  var ncmHtml='';
+  if(ncmOrder.length>1){
+    ncmOrder.forEach(function(ncm){
+      var n2=ncmMap[ncm];
+      ncmHtml+='<div class="ncm-total-block">'
+        +'<div class="ncm-total-title">IMPOSTO TOTAL NCM: '+n2.ncm+' &mdash; '+n2.desc+'</div>'
+        +'<div class="ncm-total-body">'
+          +'<div class="trow"><span class="lbl">Imposto de Importa&ccedil;&atilde;o</span><span class="val">'+fR(n2.ii)+'</span></div>'
+          +'<div class="trow"><span class="lbl">I.P.I.</span><span class="val">'+fR(n2.ipi)+'</span></div>'
+          +'<div class="trow"><span class="lbl">PIS</span><span class="val">'+fR(n2.pis)+'</span></div>'
+          +'<div class="trow"><span class="lbl">COFINS</span><span class="val">'+fR(n2.cofins)+'</span></div>'
+          +'<div class="trow"><span class="lbl">Taxa Siscomex</span><span class="val">'+fR(n2.sis)+'</span></div>'
+          +'<div class="trow"><span class="lbl">AFRMM</span><span class="val">'+fR(n2.afrmm)+'</span></div>'
+          +'<div class="trow"><span class="lbl">ICMS</span><span class="val">'+fR(n2.icms)+'</span></div>'
+          +'<div class="ncm-total-sub"><span>IMPOSTO TOTAL NCM '+n2.ncm+'</span><span>'+fR(n2.total)+'</span></div>'
+        +'</div></div>';
+    });
+    if(secNcm)secNcm.style.display='';
+  }else{
+    if(secNcm)secNcm.style.display='none';
+  }
+  document.getElementById('ncm-total-wrap').innerHTML=ncmHtml;
+
+  // DESPESAS
+  document.getElementById('desp-body').innerHTML=
+    despList.map(function(r){return '<div class="trow"><span class="lbl">'+r.nom+'</span><span class="val">'+fR(r.val)+'</span></div>';}).join('')
+    +'<div class="dsub"><span>2.1 &#8211; SUBTOTAL DESPESAS GERAIS</span><span>'+fR(totalDesp)+'</span></div>';
+
+  // TABELA RATEIO COMPLETO
+  var despCols=despList.filter(function(d){return d.val>0;});
+  var rdHtml='<thead><tr>'
+    +'<th class="L">N&#186;</th><th class="L">NCM</th><th class="L">Descri&ccedil;&atilde;o</th>'
+    +'<th>Qtd</th><th>% Rateio</th><th>VMLE (USD)</th><th>VMLE (R$)</th><th>Frete Rat. (R$)</th><th>CIF (R$)</th>'
+    +'<th>II (R$)</th><th>IPI (R$)</th><th>PIS (R$)</th><th>COFINS (R$)</th>'
+    +'<th>Siscomex</th><th>AFRMM</th>';
+  despCols.forEach(function(d){rdHtml+='<th>'+d.nom+'</th>';});
+  rdHtml+='<th>Imp. Fed+Est (R$)</th><th>Desp. Gerais (R$)</th><th>Custo Total (R$)</th><th>Custo Unit. (R$)</th></tr></thead><tbody>';
+  var totRD={vmle:0,fp:0,cif:0,ii:0,ipi:0,pis:0,cofins:0,sis:0,afrmm:0,imp:0,desp:0,total:0};
+  var despColTotals=despCols.map(function(){return 0;});
+  itemData.forEach(function(x,idx){
+    var pct=totalFOB_USD>0?(x.fobUSD/totalFOB_USD*100):0;
+    var despItem=0;
+    var despItemVals=despCols.map(function(d){
+      var v=totalCIF_BRL>0?(x.cifBRL/totalCIF_BRL)*d.val:0;despItem+=v;return v;
+    });
+    var custoTotal=x.totalImp+despItem;
+    var custoUnit=x.qtdItem>0?custoTotal/x.qtdItem:0;
+    totRD.vmle+=x.fobBRL;totRD.fp+=x.fpBRL;totRD.cif+=x.cifBRL;
+    totRD.ii+=x.ii;totRD.ipi+=x.ipi;totRD.pis+=x.pis;totRD.cofins+=x.cofins;
+    totRD.sis+=x.sisItem;totRD.afrmm+=x.afrmmItem;totRD.imp+=x.totalImp;
+    totRD.desp+=despItem;totRD.total+=custoTotal;
+    despItemVals.forEach(function(v,i){despColTotals[i]+=v;});
+    rdHtml+='<tr>'
+      +'<td class="L">'+(idx+1)+'</td><td class="L">'+x.ncm+'</td><td class="L">'+x.desc+'</td>'
+      +'<td>'+(x.qtdItem>0?x.qtdItem.toLocaleString('pt-BR'):'-')+'</td>'
+      +'<td>'+fPct(pct)+'</td>'
+      +'<td>'+fU(x.fobUSD)+'</td>'
+      +'<td>'+fR(x.fobBRL)+'</td><td>'+fR(x.fpBRL)+'</td><td>'+fR(x.cifBRL)+'</td>'
+      +'<td>'+fR(x.ii)+'</td><td>'+fR(x.ipi)+'</td><td>'+fR(x.pis)+'</td><td>'+fR(x.cofins)+'</td>'
+      +'<td>'+fR(x.sisItem)+'</td><td>'+fR(x.afrmmItem)+'</td>';
+    despItemVals.forEach(function(v){rdHtml+='<td>'+fR(v)+'</td>';});
+    rdHtml+='<td style="font-weight:600">'+fR(x.totalImp)+'</td>'
+      +'<td>'+fR(despItem)+'</td>'
+      +'<td style="font-weight:700">'+fR(custoTotal)+'</td>'
+      +'<td style="font-weight:700;color:#0d2d5e">'+(x.qtdItem>0?fR(custoUnit):'-')+'</td>'
+      +'</tr>';
+  });
+  rdHtml+='<tr class="ttr"><td class="L" colspan="3">TOTAIS</td>'
+    +'<td>-</td><td>100,00%</td>'
+    +'<td>'+fU(totalFOB_USD)+'</td>'
+    +'<td>'+fR(totRD.vmle)+'</td><td>'+fR(totRD.fp)+'</td><td>'+fR(totRD.cif)+'</td>'
+    +'<td>'+fR(totRD.ii)+'</td><td>'+fR(totRD.ipi)+'</td><td>'+fR(totRD.pis)+'</td><td>'+fR(totRD.cofins)+'</td>'
+    +'<td>'+fR(totRD.sis)+'</td><td>'+fR(totRD.afrmm)+'</td>';
+  despColTotals.forEach(function(v){rdHtml+='<td>'+fR(v)+'</td>';});
+  rdHtml+='<td>'+fR(totRD.imp)+'</td><td>'+fR(totRD.desp)+'</td><td>'+fR(totRD.total)+'</td><td>-</td></tr></tbody>';
+  document.getElementById('rdtable').innerHTML=rdHtml;
+
+  // RESUMO
+  document.getElementById('resumo-rows').innerHTML=
+    '<div class="resumo-row"><span>Valor do Produto (VMLE) <span style="font-size:10px;color:#aab3bd">&#8212; pago diretamente ao fornecedor</span></span><span style="color:#aab3bd">'+fR(totalFOB_BRL)+'</span></div>'
+    +'<div class="resumo-row"><span>Total Impostos Federais + Estaduais</span><span style="font-weight:700">'+fR(totalImpAll)+'</span></div>'
+    +'<div class="resumo-row"><span>Subtotal Despesas Gerais</span><span style="font-weight:700">'+fR(totalDesp)+'</span></div>';
+
+  document.getElementById('grand-total').innerHTML=
+    '<div class="gt-lbl">TOTAL DE IMPOSTOS (FEDERAIS + ESTADUAIS) + DESPESAS</div>'
+    +'<div class="gt-val">'+fR(grandTotal)+'</div>'
+    +'<div class="gt-sub">DATA: '+hoje+' &nbsp;&middot;&nbsp; C&acirc;mbio: R$ '+cambio.toFixed(4)+' &nbsp;&middot;&nbsp; Siscomex ('+adicoes+' adi&ccedil;&otilde;es): '+fR(sisTotal)+' &nbsp;&middot;&nbsp; AFRMM: '+fR(afrmmTotal)+'</div>';
+
+  // CUSTO UNITÁRIO POR NCM + GERAL
+  // Custo por NCM: só exibe se o NCM tiver qtdItem preenchida
+  var ucHtml='';
+  var algumCustoNCM=false;
+  if(ncmOrder.length>1){
+    ncmOrder.forEach(function(ncm){
+      var itensNCM=itemData.filter(function(x){return x.ncm===ncm;});
+      var qtdNCM=0,impNCM=0,despNCM=0;
+      itensNCM.forEach(function(x){
+        qtdNCM+=x.qtdItem;impNCM+=x.totalImp;
+        despCols.forEach(function(d){despNCM+=totalCIF_BRL>0?(x.cifBRL/totalCIF_BRL)*d.val:0;});
+      });
+      var custoNCM=impNCM+despNCM;
+      if(qtdNCM>0){
+        algumCustoNCM=true;
+        ucHtml+='<div class="unit-card" style="margin-bottom:8px">'
+          +'<div><div class="uc-lbl">Custo unit&#225;rio &#8212; NCM '+ncm+' ('+ncmMap[ncm].desc+')</div>'
+          +'<div class="uc-qty">Impostos + despesas rateadas &divide; '+qtdNCM.toLocaleString('pt-BR')+' pe&ccedil;as</div></div>'
+          +'<div class="uc-val">'+fR(custoNCM/qtdNCM)+'</div>'
+          +'</div>';
+      }
+    });
+  }
+  // Card geral: só exibe quando NÃO há custo por NCM (1 só NCM) OU quando qtdTotal foi preenchido
+  var qtdSomada=itemData.reduce(function(s,x){return s+(x.qtdItem||0);},0);
+  var qtdParaGeral=qtdSomada>0?qtdSomada:(qtdTotal||1);
+  if(!algumCustoNCM){
+    ucHtml+='<div class="unit-card">'
+      +'<div><div class="uc-lbl">Custo unit&#225;rio de importa&ccedil;&atilde;o</div>'
+      +'<div class="uc-qty">Total (impostos + despesas) &divide; '+qtdParaGeral.toLocaleString('pt-BR')+' unidade(s)</div></div>'
+      +'<div class="uc-val">'+fR(grandTotal/qtdParaGeral)+'</div>'
+      +'</div>';
+  }
+  document.getElementById('unit-cards-wrap').innerHTML=ucHtml;
+
+  var obs=gs('f_obs');var obEl=document.getElementById('obs-box');
+  if(obs){obEl.innerHTML='<strong>OBSERVA&Ccedil;&Otilde;ES</strong>'+obs.replace(/\n/g,'<br>');obEl.style.display='block';}
+  else{obEl.style.display='none';}
+
+  lastCalc={itemData:itemData,ncmOrder:ncmOrder,ncmMap:ncmMap,despList:despList,despCols:despCols,
+    totalDesp:totalDesp,grandTotal:grandTotal,unitarioGeral:unitarioGeral,
+    totalImpAll:totalImpAll,totalFOB_BRL:totalFOB_BRL,totalCIF_BRL:totalCIF_BRL,
+    totalFOB_USD:totalFOB_USD,freteUSD:freteUSD,freteBRL:freteBRL,
+    cambio:cambio,sisTotal:sisTotal,adicoes:adicoes,afrmmTotal:afrmmTotal,modal:modal,
+    qtdTotal:qtdTotal,hoje:hoje,
+    imp:gs('f_imp'),exp:gs('f_exp'),prod:gs('f_prod'),inv:gs('f_inv'),
+    porig:gs('f_porig'),pdest:gs('f_pdest')};
+
+  document.getElementById('resultado').classList.add('show');
+  document.getElementById('resultado').scrollIntoView({behavior:'smooth',block:'start'});
+  // Mostrar área de avisos pós-resultado e aviso estimativo
+  document.getElementById('area-pos-resultado').style.display='block';
+  var avisoEl=document.getElementById('aviso-estimativo');
+  if(avisoEl)avisoEl.style.display='block';
+  // ── Incrementar contador de estudos ──
+  window.__incrementarEstudo && window.__incrementarEstudo().catch(()=>{});
+}
+
+function limpar(){
+  document.getElementById('resultado').classList.remove('show');
+  document.getElementById('area-pos-resultado').style.display='none';
+  var avisoEl=document.getElementById('aviso-estimativo');
+  if(avisoEl)avisoEl.style.display='none';
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function abrirModal(){
+  if(!document.getElementById('resultado').classList.contains('show')){alert('Calcule o estudo primeiro.');return;}
+  const plano = window.__planoAtual || 'free';
+  if(plano === 'free'){
+    // Mostrar banner de upgrade em vez do modal
+    const msg = document.getElementById('limite-msg');
+    if(msg) msg.textContent = 'Exportação PDF e Excel disponível nos planos Pro e Premium.';
+    document.getElementById('limite-banner').style.display = 'block';
+    window.scrollTo({top:0,behavior:'smooth'});
+    return;
+  }
+  document.getElementById('modal').classList.add('show');
+}
+function fecharModal(){document.getElementById('modal').classList.remove('show');}
+
+function confirmarPDF(){
+  fecharModal();
+  // Preparar: ocultar seções que não vão no PDF, mostrar header/footer de impressão
+  document.getElementById('sec-rateio-desp').style.display='none';
+  document.getElementById('sec-resumo').style.display='none';
+  document.getElementById('pdf-header').style.display='block';
+  document.getElementById('pdf-footer').style.display='block';
+  // Ocultar área de avisos e mostrar rodapé comercial no PDF
+  var areaPosEl=document.getElementById('area-pos-resultado');
+  if(areaPosEl)areaPosEl.style.display='none';
+  var rodapeComEl=document.getElementById('pdf-rodape-comercial');
+  if(rodapeComEl)rodapeComEl.style.display='block';
+  // Clonar grand-total, unit-cards e obs-box para aparecerem no PDF
+  var pdfArea=document.getElementById('pdf-area');
+  var pdfFooterEl=document.getElementById('pdf-footer');
+  var gtClone=document.getElementById('grand-total').cloneNode(true);
+  var ucClone=document.getElementById('unit-cards-wrap').cloneNode(true);
+  var obClone=document.getElementById('obs-box').cloneNode(true);
+  gtClone.id='gt-print-clone';ucClone.id='uc-print-clone';obClone.id='ob-print-clone';
+  pdfArea.insertBefore(obClone,pdfFooterEl);
+  pdfArea.insertBefore(ucClone,pdfFooterEl);
+  pdfArea.insertBefore(gtClone,pdfFooterEl);
+  // Disparar impressão e restaurar depois
+  setTimeout(function(){
+    window.print();
+    setTimeout(function(){
+      pdfArea.removeChild(gtClone);
+      pdfArea.removeChild(ucClone);
+      pdfArea.removeChild(obClone);
+      document.getElementById('pdf-header').style.display='none';
+      document.getElementById('pdf-footer').style.display='none';
+      document.getElementById('sec-rateio-desp').style.display='';
+      document.getElementById('sec-resumo').style.display='';
+      var areaPosEl2=document.getElementById('area-pos-resultado');
+      if(areaPosEl2)areaPosEl2.style.display='block';
+      var rodapeComEl2=document.getElementById('pdf-rodape-comercial');
+      if(rodapeComEl2)rodapeComEl2.style.display='none';
+    },500);
+  },200);
+}
+
+function confirmarXLSX(){
+  if(!lastCalc){alert('Calcule o estudo primeiro.');return;}
+  document.getElementById('loading').textContent='Gerando Excel, aguarde...';
+  document.getElementById('loading').classList.add('show');
+  try{
+    var c=lastCalc;
+    var wb=XLSX.utils.book_new();
+    var rows=[];
+    rows.push(['IMPORTACERTO - ESTUDO DE VIABILIDADE DE IMPORTACAO']);
+    rows.push([]);
+    rows.push(['Data:',c.hoje,'','Cambio (R$/USD):',c.cambio]);
+    rows.push(['Importador:',c.imp,'','Exportador:',c.exp]);
+    rows.push(['Produto:',c.prod,'','Invoice(s):',c.inv]);
+    rows.push(['Porto Origem:',c.porig,'','Porto Destino:',c.pdest]);
+    rows.push(['FOB Total (USD):',c.totalFOB_USD,'','FOB Total (R$):',c.totalFOB_BRL]);
+    rows.push(['Frete (USD):',c.freteUSD,'','Frete (R$):',c.freteBRL]);
+    rows.push(['Valor Aduaneiro (R$):',c.totalCIF_BRL,'','Siscomex ('+c.adicoes+' adicoes):',c.sisTotal]);
+    rows.push(['AFRMM (R$):',c.afrmmTotal,'','Modal:',(c.modal==='aereo'?'Aereo':'Maritimo')]);
+    rows.push([]);
+    var hdr=['No','NCM','Descricao','Qtd (pcs)','% Rateio (FOB)','VMLE (USD)',
+      'VMLE (R$)','Frete Rat. (R$)','Valor CIF (R$)',
+      'II (R$)','IPI (R$)','PIS (R$)','COFINS (R$)','Siscomex (R$)','AFRMM (R$)'];
+    c.despCols.forEach(function(d){hdr.push(d.nom.replace(/&[^;]+;/g,'')+' (R$)');});
+    hdr.push('Imp. Fed+Est (R$)','Despesas Gerais (R$)','Custo Total (R$)','Custo Unit. (R$)');
+    rows.push(hdr);
+    var totRow={vmleUsd:0,vmle:0,fp:0,cif:0,ii:0,ipi:0,pis:0,cofins:0,sis:0,afrmm:0,imp:0,desp:0,total:0};
+    var despColTotals=c.despCols.map(function(){return 0;});
+    c.itemData.forEach(function(x,idx){
+      var pct=c.totalFOB_USD>0?(x.fobUSD/c.totalFOB_USD*100):0;
+      var despItem=0;
+      var despItemVals=c.despCols.map(function(d){
+        var v=c.totalCIF_BRL>0?(x.cifBRL/c.totalCIF_BRL)*d.val:0;despItem+=v;return v;
+      });
+      var custoTotal=x.totalImp+despItem;
+      var custoUnit=x.qtdItem>0?custoTotal/x.qtdItem:null;
+      var row=[idx+1,x.ncm,x.desc,x.qtdItem||null,pct/100,x.fobUSD,
+        x.fobBRL,x.fpBRL,x.cifBRL,x.ii,x.ipi,x.pis,x.cofins,x.sisItem,x.afrmmItem];
+      despItemVals.forEach(function(v,i){row.push(v);despColTotals[i]+=v;});
+      row.push(x.totalImp,despItem,custoTotal,custoUnit);
+      totRow.vmleUsd+=x.fobUSD;totRow.vmle+=x.fobBRL;totRow.fp+=x.fpBRL;totRow.cif+=x.cifBRL;
+      totRow.ii+=x.ii;totRow.ipi+=x.ipi;totRow.pis+=x.pis;totRow.cofins+=x.cofins;
+      totRow.sis+=x.sisItem;totRow.afrmm+=x.afrmmItem;totRow.imp+=x.totalImp;
+      totRow.desp+=despItem;totRow.total+=custoTotal;
+      rows.push(row);
+    });
+    var totLine=['TOTAIS','','',null,1,totRow.vmleUsd,totRow.vmle,totRow.fp,totRow.cif,
+      totRow.ii,totRow.ipi,totRow.pis,totRow.cofins,totRow.sis,totRow.afrmm];
+    despColTotals.forEach(function(v){totLine.push(v);});
+    totLine.push(totRow.imp,totRow.desp,totRow.total,null);
+    rows.push(totLine);rows.push([]);
+    rows.push(['RESUMO']);
+    rows.push(['Valor Produto - VMLE (pago ao fornecedor)',c.totalFOB_BRL]);
+    rows.push(['Total Impostos Federais + Estaduais',c.totalImpAll]);
+    rows.push(['Subtotal Despesas Gerais',c.totalDesp]);
+    rows.push(['TOTAL GLOBAL (Impostos + Despesas)',c.grandTotal]);
+    rows.push(['Custo Unitario Geral (div '+c.qtdTotal+' unidades)',c.unitarioGeral]);
+    var ws=XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols']=[{wch:4},{wch:12},{wch:28},{wch:10},{wch:12},{wch:13},
+      {wch:14},{wch:14},{wch:14},{wch:13},{wch:13},{wch:13},{wch:13},{wch:13},{wch:13}];
+    c.despCols.forEach(function(){ws['!cols'].push({wch:18});});
+    ws['!cols'].push({wch:22},{wch:18},{wch:16},{wch:14});
+    XLSX.utils.book_append_sheet(wb,ws,'Estudo Detalhado');
+    var imp2=(c.imp||'Estudo').replace(/[^a-zA-Z0-9]/g,'_').substring(0,30);
+    var dt2=new Date().toLocaleDateString('pt-BR').replace(/\//g,'-');
+    XLSX.writeFile(wb,'Estudo_Detalhado_'+imp2+'_'+dt2+'.xlsx');
+  }catch(e){alert('Erro XLSX: '+e.message);}
+  document.getElementById('loading').classList.remove('show');
+  fecharModal();
+}
+
+/* =========================================================
+   ESTUDOS SALVOS (persistência na nuvem via Firestore)
+   Captura todo o estado do formulário (não apenas o resultado
+   calculado) para permitir reabrir e editar depois, de qualquer
+   computador, bastando estar logado.
+   ========================================================= */
+var estudoAtualId=null;
+var estudosCache=[]; // cache em memória da última listagem, usado para renderizar a UI
+
+function showToast(msg){
+  var t=document.getElementById('save-toast');
+  t.textContent=msg;t.classList.add('show');
+  clearTimeout(t._tm);
+  t._tm=setTimeout(function(){t.classList.remove('show');},2600);
+}
+
+// Captura o estado atual de TODO o formulário (dados gerais, frete/câmbio,
+// modal de transporte, itens/NCMs, despesas e despesas extras)
+function capturarEstadoForm(){
+  var extras=extraIds.map(function(eid){
+    return{nom:gs('ex_nom-'+eid),val:gs('ex_val-'+eid)};
+  });
+  var itensForm=items.map(function(id){
+    return{
+      inv:gs('i_inv-'+id),desc:gs('i_desc-'+id),ncm:gs('i_ncm-'+id),
+      fob:gs('i_fob-'+id),ii:gs('i_ii-'+id),ipi:gs('i_ipi-'+id),
+      pis:gs('i_pis-'+id),cof:gs('i_cof-'+id),icms:gs('i_icms-'+id),
+      qtd:gs('i_qtd-'+id),red:gs('i_red-'+id),
+      icmstp:document.getElementById('i_icmstp-'+id)?document.getElementById('i_icmstp-'+id).value:'normal'
+    };
+  });
+  return{
+    imp:gs('f_imp'),exp:gs('f_exp'),prod:gs('f_prod'),inv:gs('f_inv'),
+    porig:gs('f_porig'),pdest:gs('f_pdest'),obs:gs('f_obs'),
+    frete:gs('f_frete'),cambio:gs('f_cambio'),qtd:gs('f_qtd'),
+    adicoes:document.getElementById('f_adicoes').value,
+    modal:document.getElementById('f_modal')?document.getElementById('f_modal').value:'maritimo',
+    d_taxas:gs('d_taxas'),d_port:gs('d_port'),d_rod:gs('d_rod'),
+    d_hon:gs('d_hon'),d_out:gs('d_out'),
+    itens:itensForm,extras:extras
+  };
+}
+
+// Restaura o formulário inteiro a partir de um estado salvo
+function restaurarEstadoForm(st){
+  // limpa itens e despesas extras atuais
+  items.slice().forEach(function(id){remItem(id);});
+  extraIds.slice().forEach(function(eid){remExtra(eid);});
+  document.getElementById('items-wrap').innerHTML='';
+  document.getElementById('extras-wrap').innerHTML='';
+  items=[];extraIds=[];
+
+  document.getElementById('f_imp').value=st.imp||'';
+  document.getElementById('f_exp').value=st.exp||'';
+  document.getElementById('f_prod').value=st.prod||'';
+  document.getElementById('f_inv').value=st.inv||'';
+  document.getElementById('f_porig').value=st.porig||'';
+  document.getElementById('f_pdest').value=st.pdest||'';
+  document.getElementById('f_obs').value=st.obs||'';
+  document.getElementById('f_frete').value=st.frete||'';
+  document.getElementById('f_cambio').value=st.cambio||'';
+  document.getElementById('f_qtd').value=st.qtd||'1';
+  if(st.adicoes){document.getElementById('f_adicoes').value=st.adicoes;}
+  atualizarSiscomex();
+  if(document.getElementById('f_modal')){
+    document.getElementById('f_modal').value=st.modal||'maritimo';
+    atualizarModal();
+  }
+  document.getElementById('d_taxas').value=st.d_taxas||'0';
+  document.getElementById('d_port').value=st.d_port||'0';
+  document.getElementById('d_rod').value=st.d_rod||'0';
+  document.getElementById('d_hon').value=st.d_hon||'0';
+  document.getElementById('d_out').value=st.d_out||'0';
+
+  (st.itens||[]).forEach(function(it){addItem(it);});
+  if(!(st.itens||[]).length){addItem();}
+  (st.extras||[]).forEach(function(ex){addExtra(ex.nom,ex.val);});
+
+  document.getElementById('resultado').classList.remove('show');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+async function abrirModalEstudos(){
+  document.getElementById('estudo-nome-novo').value='';
+  var wrap=document.getElementById('estudos-list');
+  wrap.innerHTML='<div class="estudos-empty">Carregando estudos…</div>';
+  document.getElementById('modal-estudos').classList.add('show');
+
+  try{
+    estudosCache=await window.__firestoreListarEstudos();
+  }catch(e){
+    wrap.innerHTML='<div class="estudos-empty">Erro ao carregar estudos: '+escHtml(e.message)+'</div>';
+    return;
+  }
+
+  var updRow=document.getElementById('estudo-update-row');
+  if(estudoAtualId){
+    var atual=estudosCache.find(function(e){return e.id===estudoAtualId;});
+    if(atual){
+      updRow.style.display='flex';
+      updRow.querySelector('button').textContent='\uD83D\uDCBE Atualizar "'+atual.nome+'"';
+    }else{
+      estudoAtualId=null;
+      updRow.style.display='none';
+    }
+  }else{
+    updRow.style.display='none';
+  }
+  renderListaEstudos();
+}
+function fecharModalEstudos(){document.getElementById('modal-estudos').classList.remove('show');}
+
+function escHtml(s){
+  return String(s==null?'':s).replace(/[&<>"']/g,function(c){
+    return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+
+function renderListaEstudos(){
+  var wrap=document.getElementById('estudos-list');
+  if(!estudosCache.length){
+    wrap.innerHTML='<div class="estudos-empty">Nenhum estudo salvo ainda.<br>Preencha o formulário e clique em "Salvar como novo".</div>';
+    return;
+  }
+  // mais recentes primeiro
+  var ordenada=estudosCache.slice().sort(function(a,b){return (b.atualizadoEm||0)-(a.atualizadoEm||0);});
+  var html='';
+  ordenada.forEach(function(e){
+    var dt=e.atualizadoEm?new Date(e.atualizadoEm).toLocaleDateString('pt-BR')+' '+new Date(e.atualizadoEm).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'';
+    var modalLbl=(e.estado&&e.estado.modal==='aereo')?'A&#233;reo':'Mar&#237;timo';
+    html+='<div class="estudo-row">'
+      +'<div class="estudo-info">'
+        +'<div class="estudo-nome">'+escHtml(e.nome||'(sem nome)')+'</div>'
+        +'<div class="estudo-meta">'+modalLbl+' &nbsp;&middot;&nbsp; Atualizado: '+dt+'</div>'
+      +'</div>'
+      +'<div class="estudo-btns">'
+        +'<button class="ebtn ebtn-load" data-estudo-id="'+e.id+'" data-action="load">Abrir</button>'
+        +'<button class="ebtn ebtn-del" data-estudo-id="'+e.id+'" data-action="del">Excluir</button>'
+      +'</div>'
+    +'</div>';
+  });
+  wrap.innerHTML=html;
+}
+
+// Delegação de eventos: evita problemas de escaping ao montar onclick com nomes/ids dinâmicos
+document.addEventListener('click',function(ev){
+  var btn=ev.target.closest&&ev.target.closest('[data-estudo-id]');
+  if(!btn)return;
+  var id=btn.getAttribute('data-estudo-id');
+  var action=btn.getAttribute('data-action');
+  if(action==='load')carregarEstudo(id);
+  else if(action==='del')excluirEstudo(id);
+});
+
+async function salvarEstudoAtual(){
+  var nomeInput=document.getElementById('estudo-nome-novo').value.trim();
+  var estado=capturarEstadoForm();
+  if(!estado.itens.length){alert('Adicione ao menos um item antes de salvar.');return;}
+  var nome=nomeInput||(estado.imp||'Estudo sem nome')+(estado.inv?(' — '+estado.inv):'');
+  var btn=document.getElementById('estudo-nome-novo').nextElementSibling;
+  var textoOriginal=btn?btn.textContent:'';
+  if(btn){btn.disabled=true;btn.textContent='Salvando…';}
+  try{
+    var novoId=await window.__firestoreSalvarEstudo(null,nome,estado,true);
+    estudoAtualId=novoId;
+    showToast('Estudo "'+nome+'" salvo com sucesso.');
+    document.getElementById('estudo-nome-novo').value='';
+    var updRow=document.getElementById('estudo-update-row');
+    updRow.style.display='flex';
+    updRow.querySelector('button').textContent='\uD83D\uDCBE Atualizar "'+nome+'"';
+    estudosCache=await window.__firestoreListarEstudos();
+    renderListaEstudos();
+  }catch(e){
+    alert('Não foi possível salvar o estudo: '+e.message);
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent=textoOriginal;}
+  }
+}
+
+// Salva alterações sobre um estudo já existente (mesmo id), preservando o histórico de criação
+async function atualizarEstudoExistente(id){
+  var estado=capturarEstadoForm();
+  if(!estado.itens.length){alert('Adicione ao menos um item antes de salvar.');return;}
+  var atual=estudosCache.find(function(e){return e.id===id;});
+  var nome=atual?atual.nome:'Estudo';
+  var updRow=document.getElementById('estudo-update-row');
+  var btn=updRow.querySelector('button');
+  var textoOriginal=btn.textContent;
+  btn.disabled=true;btn.textContent='Atualizando…';
+  try{
+    await window.__firestoreSalvarEstudo(id,nome,estado,false);
+    showToast('Estudo "'+nome+'" atualizado com sucesso.');
+  }catch(e){
+    alert('Não foi possível atualizar o estudo: '+e.message);
+  }finally{
+    btn.disabled=false;btn.textContent=textoOriginal;
+  }
+}
+
+async function carregarEstudo(id){
+  var item=estudosCache.find(function(e){return e.id===id;});
+  if(!item){alert('Estudo não encontrado.');return;}
+  if(items.length&&!confirm('Carregar este estudo vai substituir os dados atuais do formulário. Deseja continuar?')){return;}
+  restaurarEstadoForm(item.estado);
+  estudoAtualId=id;
+  fecharModalEstudos();
+  showToast('Estudo "'+item.nome+'" carregado. Altere e clique em Estudos Salvos > Atualizar para regravar.');
+}
+
+async function excluirEstudo(id){
+  var item=estudosCache.find(function(e){return e.id===id;});
+  if(!item)return;
+  if(!confirm('Excluir o estudo "'+item.nome+'"? Esta ação não pode ser desfeita.'))return;
+  try{
+    await window.__firestoreExcluirEstudo(id);
+    estudosCache=estudosCache.filter(function(e){return e.id!==id;});
+    if(estudoAtualId===id)estudoAtualId=null;
+    renderListaEstudos();
+  }catch(e){
+    alert('Não foi possível excluir o estudo: '+e.message);
+  }
+}
+
+
+
+/* =========================================================
+   BANCO NCM — consulta automática de alíquotas no Firestore
+   Coleção: ncm_aliquotas
+   Campos do documento: ii, ipi, pis, cofins, descricao
+   ID do doc: NCM de 8 dígitos (ex: "85322590")
+   ========================================================= */
+var _ncmCache = {}; // cache em memória para evitar consultas repetidas
+
+async function onNcmInput(id, valor) {
+  var ncm = valor.replace(/[^0-9]/g,'');
+  var statusEl = document.getElementById('ncm-status-'+id);
+  var fillBtn  = document.getElementById('ncm-fill-btn-'+id);
+
+  // Limpar estado anterior
+  if(statusEl){ statusEl.className='ncm-status'; statusEl.textContent=''; }
+  if(fillBtn)  { fillBtn.classList.remove('show'); }
+  if(fillBtn)  { fillBtn._ncmData = null; }
+
+  // Só busca quando tiver 8 dígitos
+  if(ncm.length < 8) return;
+
+  // Checar cache
+  var ncm8 = ncm.substring(0,8);
+  if(_ncmCache[ncm8] !== undefined) {
+    _aplicarResultadoNCM(id, ncm8, _ncmCache[ncm8]);
+    return;
+  }
+
+  // Mostrar loading
+  if(statusEl){ statusEl.className='ncm-status loading'; statusEl.textContent='🔍 Consultando banco de NCMs…'; }
+
+  try {
+    if(!window.__buscarNCM) throw new Error('Módulo NCM não disponível');
+    var dados = await window.__buscarNCM(ncm8);
+    _ncmCache[ncm8] = dados; // guardar no cache (null = não encontrado)
+    _aplicarResultadoNCM(id, ncm8, dados);
+  } catch(e) {
+    if(statusEl){ statusEl.className='ncm-status err'; statusEl.textContent='Erro ao consultar: '+e.message; }
+  }
+}
+
+function _aplicarResultadoNCM(id, ncm8, dados) {
+  var statusEl = document.getElementById('ncm-status-'+id);
+  var fillBtn  = document.getElementById('ncm-fill-btn-'+id);
+
+  if(!dados) {
+    if(statusEl){ statusEl.className='ncm-status err'; statusEl.textContent='NCM '+ ncm8 +' não encontrado no banco. Preencha manualmente.'; }
+    return;
+  }
+
+  var desc = dados.descricao ? ' — '+dados.descricao : '';
+  if(statusEl){
+    statusEl.className='ncm-status ok';
+    statusEl.textContent='✔ NCM encontrado'+ desc
+      +' | II: '+dados.ii+'% · IPI: '+dados.ipi+'% · PIS: '+dados.pis+'% · COFINS: '+dados.cofins+'%';
+  }
+  if(fillBtn){
+    fillBtn.classList.add('show');
+    fillBtn._ncmData = dados;
+  }
+}
+
+function preencherAliquotas(id) {
+  var fillBtn = document.getElementById('ncm-fill-btn-'+id);
+  if(!fillBtn || !fillBtn._ncmData) return;
+  var d = fillBtn._ncmData;
+  var set = function(fieldId, val){
+    var el = document.getElementById(fieldId);
+    if(el && (val !== null && val !== undefined)) el.value = val;
+  };
+  set('i_ii-'+id,    d.ii    !== undefined ? d.ii    : '');
+  set('i_ipi-'+id,   d.ipi   !== undefined ? d.ipi   : '');
+  set('i_pis-'+id,   d.pis   !== undefined ? d.pis   : '');
+  set('i_cof-'+id,   d.cofins!== undefined ? d.cofins: '');
+  if(d.icms !== undefined && d.icms !== null) set('i_icms-'+id, d.icms);
+  // Preencher descrição se o campo estiver vazio
+  var descEl = document.getElementById('i_desc-'+id);
+  if(descEl && !descEl.value && d.descricao) descEl.value = d.descricao;
+  // Feedback visual breve no botão
+  fillBtn.textContent = '✔ Preenchido!';
+  fillBtn.style.background = '#E1F5EE';
+  fillBtn.style.color = '#0F6E56';
+  setTimeout(function(){
+    fillBtn.textContent = '✔ Preencher alíquotas automático';
+    fillBtn.style.background = '';
+    fillBtn.style.color = '';
+  }, 2000);
+}
+
+/* =========================================================
+   PTAX AUTOMÁTICA — API pública do Banco Central do Brasil
+   Endpoint: ptax.bcb.gov.br (sem necessidade de autenticação)
+   ========================================================= */
+async function buscarPTAX() {
+  var btn  = document.getElementById('btn-ptax');
+  var info = document.getElementById('ptax-info');
+  var inp  = document.getElementById('f_cambio');
+  if(!btn || !inp) return;
+  btn.disabled = true;
+  btn.textContent = '\u23f3 Buscando\u2026';
+  if(info) info.textContent = '';
+  try {
+    var ptax = null, dataUsada = '';
+    // Fonte 1: OData BCB (CORS liberado)
+    for(var i = 0; i <= 5; i++) {
+      var d = new Date();
+      d.setDate(d.getDate() - i);
+      if(d.getDay()===0) d.setDate(d.getDate()-1);
+      if(d.getDay()===6) d.setDate(d.getDate()-1);
+      var mm = String(d.getMonth()+1).padStart(2,'0');
+      var dd2 = String(d.getDate()).padStart(2,'0');
+      var yyyy = d.getFullYear();
+      var dataFmt = mm+'-'+dd2+'-'+yyyy;
+      var dataExib = dd2+'/'+mm+'/'+yyyy;
+      try {
+        var enc = encodeURIComponent;
+        var url = 'https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/'
+          + 'CotacaoMoedaDia(moeda=@moeda,dataCotacao=@data)'
+          + '?@moeda=' + enc("'USD'")
+          + '&@data=' + enc("'"+dataFmt+"'")
+          + '&$top=1&$orderby=dataHoraCotacao%20desc&$format=json&$select=cotacaoCompra,dataHoraCotacao';
+        var resp = await fetch(url);
+        if(!resp.ok) continue;
+        var jdata = await resp.json();
+        if(jdata.value && jdata.value.length > 0) {
+          ptax = jdata.value[0].cotacaoVenda;
+          dataUsada = dataExib + ' ' + (jdata.value[0].dataHoraCotacao||'').substring(11,16);
+          break;
+        }
+      } catch(e2) { continue; }
+    }
+    // Fonte 2: AwesomeAPI (fallback, CORS OK)
+    if(!ptax) {
+      try {
+        var r2 = await fetch('https://economia.awesomeapi.com.br/json/last/USD-BRL');
+        var j2 = await r2.json();
+        if(j2['USDBRL'] && j2['USDBRL'].bid) {
+          ptax = parseFloat(j2['USDBRL'].bid);
+          dataUsada = 'agora (AwesomeAPI)';
+        }
+      } catch(e3) {}
+    }
+    if(ptax) {
+      inp.value = parseFloat(ptax).toFixed(4);
+      if(info){ info.textContent = '\ud83d\udce1 PTAX venda em ' + dataUsada + ' \u2014 fonte: BCB'; info.style.color='#0F6E56'; }
+    } else {
+      if(info){ info.textContent = 'PTAX indispon\u00edvel. Preencha manualmente.'; info.style.color='#791F1F'; }
+    }
+  } catch(e) {
+    if(info){ info.textContent = 'Erro: '+e.message; info.style.color='#791F1F'; }
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '\ud83d\udce1 PTAX';
+  }
+}
+
+function abrirModalValidacao(){
+  document.getElementById('val-observacao').value='';
+  document.getElementById('validacao-form-area').style.display='block';
+  document.getElementById('validacao-sucesso').style.display='none';
+  document.getElementById('modal-validacao').classList.add('show');
+}
+function fecharModalValidacao(){
+  document.getElementById('modal-validacao').classList.remove('show');
+}
+
+async function enviarValidacao(){
+  var btn=document.getElementById('btn-enviar-analise');
+  btn.disabled=true;btn.textContent='Enviando…';
+
+  try{
+    // Montar dados do lead a partir do estudo atual
+    var obs=document.getElementById('val-observacao').value.trim();
+    var hoje=new Date().toISOString().split('T')[0];
+
+    // Gerar ID do estudo no padrão EVI-YYYY-NNNNN
+    var ano=new Date().getFullYear();
+    var rand=String(Math.floor(Math.random()*99999)).padStart(5,'0');
+    var estudoId='EVI-'+ano+'-'+rand;
+
+    // Coletar NCMs dos itens do formulário
+    var ncmList=[];
+    var itemEls=document.querySelectorAll('[id^="i_ncm-"]');
+    itemEls.forEach(function(el){if(el.value)ncmList.push(el.value);});
+
+    // Dados do usuário logado
+    var uid=window.__currentUser&&window.__currentUser.uid||'';
+    var email=window.__currentUser&&window.__currentUser.email||'';
+    var nome=window.__currentUser&&window.__currentUser.displayName||'';
+    var empresa=document.getElementById('f_imp')?document.getElementById('f_imp').value:'';
+    var fob=document.getElementById('f_frete')&&lastCalc?'USD '+lastCalc.totalFOB_USD.toFixed(2):'';
+    var cambio=document.getElementById('f_cambio')?document.getElementById('f_cambio').value:'';
+
+    var lead={
+      userId:uid,
+      estudoId:estudoId,
+      nome:nome,
+      empresa:empresa,
+      email:email,
+      whatsapp:'',
+      ncms:ncmList,
+      valorFob:fob,
+      cambio:cambio,
+      observacao:obs,
+      status:'Novo',
+      dataSolicitacao:hoje
+    };
+
+    // Salvar no Firestore – coleção leads_especializados
+    await window.__salvarLeadEspecializado(lead);
+
+    // Mostrar sucesso
+    document.getElementById('validacao-form-area').style.display='none';
+    document.getElementById('validacao-sucesso').style.display='block';
+  }catch(e){
+    alert('Ocorreu um erro ao enviar sua solicitação. Tente novamente.');
+    console.error(e);
+  }finally{
+    btn.disabled=false;btn.textContent='📩 Enviar para análise';
+  }
+}
+
+addItem();
+
+function __abrirUpgrade() {
+  // Por enquanto abre modal informativo; futuramente integrará Stripe/PagSeguro
+  alert('Em breve! O plano PRO do ImportaCerto estará disponível.\nEntre em contato: contato@importacerto.com.br');
+}
+</script>
+</body>
+</html+'<label>NCM</label>'
+        +'<input type="text" id="i_ncm-'+id+'" placeholder="Ex: 85322590" maxlength="10" value="'+(cf.ncm||'')+'" oninput="onNcmInput('+id+',this.value)">'        +'<div class="ncm-status" id="ncm-status-'+id+'"></div>'        +'<button class="ncm-fill-btn" id="ncm-fill-btn-'+id+'" onclick="preencherAliquotas('+id+')">✔ Preencher alíquotas automático</button>'        +'</div>'
+      +'<div><label>Valor FOB (USD)</label><input type="number" id="i_fob-'+id+'" step="0.01" placeholder="0.00" value="'+(cf.fob||'')+'"></div>'
+    +'</div>'
+    +'<div class="g5">'
+      +'<div><label>II (%)</label><input type="number" id="i_ii-'+id+'" step="0.01" placeholder="0.00" value="'+(cf.ii||'')+'"></div>'
+      +'<div><label>IPI (%)</label><input type="number" id="i_ipi-'+id+'" step="0.01" placeholder="0.00" value="'+(cf.ipi||'')+'"></div>'
+      +'<div><label>PIS (%)</label><input type="number" id="i_pis-'+id+'" step="0.01" placeholder="0.00" value="'+(cf.pis||'')+'"></div>'
+      +'<div><label>COFINS (%)</label><input type="number" id="i_cof-'+id+'" step="0.01" placeholder="0.00" value="'+(cf.cof||'')+'"></div>'
+      +'<div><label>ICMS (%)</label><input type="number" id="i_icms-'+id+'" step="0.01" value="'+(cf.icms||'20')+'"></div>'
+    +'</div>'
+    +'<div class="g3">'
+      +'<div><label>Tipo ICMS</label>'
+        +'<select id="i_icmstp-'+id+'" onchange="toggleReducao('+id+')">'
+          +'<option value="normal"'+((!cf.icmstp||cf.icmstp==='normal')?' selected':'')+'">Normal (base cheia)</option>'
+          +'<option value="reducao"'+(cf.icmstp==='reducao'?' selected':'')+'">Redu&#231;&#227;o de Base &#8211; Conv. 52/91</option>'
+        +'</select>'
+      +'</div>'
+      +'<d+'<div id="i_red_wrap-'+id+'" style="'+(cf.icmstp==='reducao'?'':'display:none')+'">'
+        +'<label>% Redu&#231;&#227;o <span style="font-size:10px;color:#aab3bd">(Ex: 8.80 ou 5.60)</span></label>'
+        +'<input type="number" id="i_red-'+id+'" step="0.01" placeholder="Ex: 8.80" value="'+(cf.red||'')+'" oninput="atualizarDivisor('+id+')">'
+        +'<small style="color:#3a9bd5;font-size:10px;display:block;margin-top:2px">Divisor: <strong id="i_div-'+id+'">&#8212;</strong></small>'
+      +'</div>'
+      +'<div><label>Quantidade de pe&#231;as</label><input type="number" id="i_qtd-'+id+'" step="1" min="1" placeholder="Ex: 1500" value="'+(cf.qtd||'')+'"></div>'
+    +'</div>';
+    +'<div id="i_icms_alerta-'+id+'" class="icms-alerta" style="margin-top:8px">'+'⚠️ A aplicação de benefícios fiscais estaduais depende da análise da mercadoria, NCM, estado de destino e legislação vigente. Recomenda-se validação prévia com especialista.'+'</div>'
+  document.getElementById('items-wrap').appendChild(d);
+  toggleReducao(id);
+}
+function remItem(id){items=items.filter(function(x){return x!==id;});var el=document.getElementById('itm-'+id);if(el)el.remove();}
+function duplicarItem(id){
+  addItem({inv:gs('i_inv-'+id),desc:gs('i_desc-'+id),ncm:gs('i_ncm-'+id),
+    fob:gs('i_fob-'+id),ii:gs('i_ii-'+id),ipi:gs('i_ipi-'+id),
+    pis:gs('i_pis-'+id),cof:gs('i_cof-'+id),icms:gs('i_icms-'+id),
+    qtd:gs('i_qtd-'+id),red:gs('i_red-'+id),
+    icmstp:document.getElementById('i_icmstp-'+id)?document.getElementById('i_icmstp-'+id).value:'normal'});
+}
+function addExtra(nom,val){
+  extraCount++;var eid=extraCount;extraIds.push(eid);
+  var d=document.createElement('div');d.className='desp-extra-row';d.id='ext-'+eid;
+  d.innerHTML='<input type="text" id="ex_nom-'+eid+'" placeholder="Ex: Assessoria Aduaneira" value="'+(nom||'')+'">'
+    +'<input type="number" id="ex_val-'+eid+'" step="0.01" placeholder="0.00" style="max-width:140px" value="'+(val||val===0?val:'')+'">'
+    +'<button class="rm-extra" onclick="remExtra('+eid+')">&#215;</button>';
+  document.getElementById('extras-wrap').appendChild(d);
+}
+function remExtra(eid){extraIds=extraIds.filter(function(x){return x!==eid;});var el=document.getElementById('ext-'+eid);if(el)el.remove();}
+
+async function calcular(){
+  if(!items.length){alert('Adicione pelo menos um item.');return;}
+
+  // ── Verificar limite de estudos ──
+  try {
+    await window.__verificarLimiteEstudos();
+  } catch(e) {
+    if(e.message && e.message.startsWith('LIMITE_ATINGIDO')) {
+      const [,plano,usados,limite] = e.message.split(':');
+      const msg = document.getElementById('limite-msg');
+      if(msg) msg.textContent = `Limite do plano ${plano.toUpperCase()} atingido: ${usados}/${limite} estudos este mês.`;
+      document.getElementById('limite-banner').style.display = 'block';
+      window.scrollTo({top:0,behavior:'smooth'});
+      return;
+    }
+    // Se não houver doc de usuário (conta antiga), deixa passar
+  }
+  var cambio=gv('f_cambio'),freteUSD=gv('f_frete');
+  if(!cambio||!freteUSD){alert('Preencha taxa cambial e frete total.');return;}
+  var adicoes=parseInt(document.getElementById('f_adicoes').value)||1;
+  var sisTotal=getSiscomex(adicoes);
+  var totalFOB_USD=0;
+  items.forEach(function(id){totalFOB_USD+=gv('i_fob-'+id);});
+  var freteBRL=freteUSD*cambio;
+  var qtdTotal=gv('f_qtd')||1;
+  var hoje=new Date().toLocaleDateString('pt-BR');
+  var modal=document.getElementById('f_modal')?document.getElementById('f_modal').value:'maritimo';
+  var afrmmTotal=modal==='aereo'?0:(freteUSD*cambio*0.08+20);
+  var totalCIF_all=(totalFOB_USD+freteUSD)*cambio;
+
+  var itemData=items.map(function(id){
+    var fobUSD=gv('i_fob-'+id);
+    var fpUSD=totalFOB_USD>0?(fobUSD/totalFOB_USD)*freteUSD:0;
+    var fpBRL=fpUSD*cambio;
+    var cifUSD=fobUSD+fpUSD;
+    var cifBRL=cifUSD*cambio;
+    var fobBRL=fobUSD*cambio;
+    var afrmmItem=totalCIF_all>0?(cifBRL/totalCIF_all)*afrmmTotal:afrmmTotal;
+    var sisItem=totalCIF_all>0?(cifBRL/totalCIF_all)*sisTotal:sisTotal;
+    var iiA=gv('i_ii-'+id)/100,ipiA=gv('i_ipi-'+id)/100;
+    var pisA=gv('i_pis-'+id)/100,cofA=gv('i_cof-'+id)/100;
+    var icmsA=gv('i_icms-'+id)/100;
+    var icmsTP=document.getElementById('i_icmstp-'+id)?document.getElementById('i_icmstp-'+id).value:'normal';
+    var qtdItem=gv('i_qtd-'+id)||0;
+    var ii=cifBRL*iiA,ipi=(cifBRL+ii)*ipiA,pis=cifBRL*pisA,cofins=cifBRL*cofA;
+    var redPct=gv('i_red-'+id);
+    var icms=0;
+    if(icmsTP==='reducao'&&redPct>0){
+      var divisor=(100-redPct)/100;
+      icms=((cifBRL+ii+ipi+pis+cofins+afrmmItem+sisItem)/divisor)*icmsA;
+    }else{
+      icms=((cifBRL+ii+ipi+pis+cofins+afrmmItem+sisItem)/(1-icmsA))*icmsA;
+    }
+    var totalImp=ii+ipi+pis+cofins+sisItem+icms+afrmmItem;
+    return{id:id,desc:gs('i_desc-'+id)||'—',ncm:gs('i_ncm-'+id)||'—',inv:gs('i_inv-'+id)||'—',
+      fobUSD:fobUSD,fpUSD:fpUSD,cifUSD:cifUSD,fobBRL:fobBRL,fpBRL:fpBRL,cifBRL:cifBRL,
+      iiA:iiA,ipiA:ipiA,pisA:pisA,cofA:cofA,icmsA:icmsA,icmsTP:icmsTP,redPct:redPct,qtdItem:qtdItem,
+      ii:ii,ipi:ipi,pis:pis,cofins:cofins,icms:icms,afrmmItem:afrmmItem,sisItem:sisItem,totalImp:totalImp};
+  });
+
+  var totalFOB_BRL=0,totalCIF_BRL=0,totalImpAll=0;
+  itemData.forEach(function(x){totalFOB_BRL+=x.fobBRL;totalCIF_BRL+=x.cifBRL;totalImpAll+=x.totalImp;});
+
+  var d_frete=freteBRL,d_taxas=gv('d_taxas'),d_port=gv('d_port');
+  var d_rod=gv('d_rod'),d_hon=gv('d_hon'),d_out=gv('d_out');
+  var totalExtras=0,extrasData=[];
+  extraIds.forEach(function(eid){
+    var nom=gs('ex_nom-'+eid)||'Despesa extra';
+    var val=gv('ex_val-'+eid);
+    totalExtras+=val;extrasData.push({nom:nom,val:val});
+  });
+  var totalDesp=d_frete+d_taxas+d_port+d_rod+d_hon+d_out+totalExtras;
+  var grandTotal=totalImpAll+totalDesp;
+  var unitarioGeral=grandTotal/(qtdTotal||1);
+  document.getElementById('d_frete').value=freteBRL.toFixed(2);
+
+  var despList=[
+    {nom:'Frete Internacional',val:d_frete},
+    {nom:'Taxas locais de frete',val:d_taxas},
+    {nom:'Servi&#231;o portu&#225;rio',val:d_port},
+    {nom:'Transporte rodovi&#225;rio',val:d_rod},
+    {nom:'Honor&#225;rios / Serv. Aduaneiro',val:d_hon},
+    {nom:'Outras despesas',val:d_out}
+  ];
+  extrasData.forEach(function(e){despList.push({nom:e.nom,val:e.val});});
+
+  // IDENT
+  document.getElementById('res-ident').innerHTML=
+    '<tr><td class="lk">IMPORTADOR:</td><td>'+gs('f_imp')+'</td><td class="sep"></td><td class="key">TAXA C&Acirc;MBIO</td><td class="val">R$ '+cambio.toFixed(4)+'</td></tr>'
+    +'<tr><td class="lk">EXPORTADOR:</td><td>'+gs('f_exp')+'</td><td class="sep"></td><td class="key">QUANTIDADE TOTAL</td><td class="val">'+qtdTotal+'</td></tr>'
+    +'<tr><td class="lk">PRODUTO:</td><td>'+gs('f_prod')+'</td><td class="sep"></td><td class="key">VMLE (R$)</td><td class="val" style="font-weight:700">'+fR(totalFOB_BRL)+'</td></tr>'
+    +'<tr><td class="lk">PORTO ORIGEM:</td><td>'+gs('f_porig')+'</td><td class="sep"></td><td class="key">TOTAL FOB (USD)</td><td class="val">'+fU(totalFOB_USD)+'</td></tr>'
+    +'<tr><td class="lk">PORTO DESTINO:</td><td>'+gs('f_pdest')+'</td><td class="sep"></td><td class="key">FRETE (USD)</td><td class="val">'+fU(freteUSD)+'</td></tr>'
+    +'<tr><td class="lk">INVOICE(S):</td><td>'+gs('f_inv')+'</td><td class="sep"></td><td class="key">VALOR ADUANEIRO (R$)</td><td class="val" style="font-weight:700">'+fR(totalCIF_BRL)+'</td></tr>'
+    +'<tr><td class="lk">SISCOMEX:</td><td>'+adicoes+' adi&#231;&#245;es</td><td class="sep"></td><td class="key">TAXA SISCOMEX (R$)</td><td class="val" style="font-weight:700">'+fR(sisTotal)+'</td></tr>'
+    +'<tr><td class="lk">MODAL:</td><td>'+(modal==='aereo'?'A&#233;reo':'Mar&#237;timo')+'</td><td class="sep"></td><td class="key">AFRMM (R$)</td><td class="val" style="font-weight:700">'+(modal==='aereo'?'N&#227;o aplic&#225;vel':fR(afrmmTotal))+'</td></tr>';
+
+  // RATEIO
+  var rt='<thead><tr>'
+    +'<th class="L">Invoice</th><th class="L">Descri&ccedil;&atilde;o</th><th class="L">NCM</th>'
+    +'<th>FOB (USD)</th><th>FOB (R$)</th><th>Frete Rat. (USD)</th><th>Frete Rat. (R$)</th><th>Valor Aduaneiro (R$)</th>'
+    +'</tr></thead><tbody>';
+  itemData.forEach(function(x){
+    rt+='<tr><td class="L">'+x.inv+'</td><td class="L">'+x.desc+'</td><td class="L">'+x.ncm+'</td>'
+      +'<td>'+fU(x.fobUSD)+'</td><td>'+fR(x.fobBRL)+'</td><td>'+fU(x.fpUSD)+'</td><td>'+fR(x.fpBRL)+'</td>'
+      +'<td style="font-weight:700">'+fR(x.cifBRL)+'</td></tr>';
+  });
+  rt+='<tr class="ttr"><td class="L" colspan="3">TOTAL</td>'
+    +'<td>'+fU(totalFOB_USD)+'</td><td>'+fR(totalFOB_BRL)+'</td>'
+    +'<td>'+fU(freteUSD)+'</td><td>'+fR(freteBRL)+'</td><td>'+fR(totalCIF_BRL)+'</td>'
+    +'</tr></tbody>';
+  document.getElementById('rtable').innerHTML=rt;
+
+  // IMPOSTOS POR ITEM
+  var impHtml='';
+  itemData.forEach(function(x){
+    var icmsLabel='ICMS';
+    if(x.icmsTP==='reducao'&&x.redPct>0){
+      var divLabel=((100-x.redPct)/100).toFixed(4);
+      icmsLabel='ICMS (Redu&ccedil;&atilde;o '+x.redPct.toFixed(2).replace('.',',')+
+        '% &ndash; divisor '+divLabel+')';
+    }
+    impHtml+='<div class="tax-block">'
+      +'<div class="tax-title">NCM: '+x.ncm+' &mdash; '+x.desc+' &nbsp;|&nbsp; Valor Aduaneiro: '+fR(x.cifBRL)+'</div>'
+      +'<div class="tax-body">'
+        +'<div class="trow"><span class="lbl">Imposto de Importa&ccedil;&atilde;o<span class="aliq">'+fp(x.iiA)+'</span></span><span class="val">'+fR(x.ii)+'</span></div>'
+        +'<div class="trow"><span class="lbl">I.P.I.<span class="aliq">'+fp(x.ipiA)+'</span></span><span class="val">'+fR(x.ipi)+'</span></div>'
+        +'<div class="trow"><span class="lbl">PIS<span class="aliq">'+fp(x.pisA)+'</span></span><span class="val">'+fR(x.pis)+'</span></div>'
+        +'<div class="trow"><span class="lbl">COFINS<span class="aliq">'+fp(x.cofA)+'</span></span><span class="val">'+fR(x.cofins)+'</span></div>'
+        +'<div class="trow"><span class="lbl">Taxa Siscomex (rateado pelo CIF)<span class="aliq">proporcional</span></span><span class="val">'+fR(x.sisItem)+'</span></div>'
+        +'<div class="trow"><span class="lbl">AFRMM<span class="aliq">'+(modal==='aereo'?'N&atilde;o aplic&aacute;vel (modal a&eacute;reo)':'Frete&times;C&acirc;mbio&times;8%+R$20 rateado')+'</span></span><span class="val">'+fR(x.afrmmItem)+'</span></div>'
+        +'<div class="trow"><span class="lbl">'+icmsLabel+'<span class="aliq">'+fp(x.icmsA)+'</span></span><span class="val">'+fR(x.icms)+'</span></div>'
+        +'<div class="tsub"><span>Subtotal impostos &#8212; '+x.inv+' / NCM '+x.ncm+'</span><span>'+fR(x.totalImp)+'</span></div>'
+      +'</div></div>';
+  });
+  document.getElementById('imp-wrap').innerHTML=impHtml;
+
+  // BLOCO CONSOLIDADO PARA IMPRESSAO (soma de todos os itens em um unico bloco)
+  (function(){
+    var totII=0,totIPI=0,totPIS=0,totCOF=0,totSIS=0,totAFR=0,totICMS=0,totIMP=0;
+    var totCIF=0;
+    itemData.forEach(function(x){
+      totII+=x.ii;totIPI+=x.ipi;totPIS+=x.pis;totCOF+=x.cofins;
+      totSIS+=x.sisItem;totAFR+=x.afrmmItem;totICMS+=x.icms;totIMP+=x.totalImp;
+      totCIF+=x.cifBRL;
+    });
+    var printHtml='<div class="tax-block">'      +'<div class="tax-title">Valor Aduaneiro Total: '+fR(totCIF)+'</div>'      +'<div class="tax-body">'        +'<div class="trow"><span class="lbl">Imposto de Importa&ccedil;&atilde;o</span><span class="val">'+fR(totII)+'</span></div>'        +'<div class="trow"><span class="lbl">I.P.I.</span><span class="val">'+fR(totIPI)+'</span></div>'        +'<div class="trow"><span class="lbl">PIS</span><span class="val">'+fR(totPIS)+'</span></div>'        +'<div class="trow"><span class="lbl">COFINS</span><span class="val">'+fR(totCOF)+'</span></div>'        +'<div class="trow"><span class="lbl">Taxa Siscomex</span><span class="val">'+fR(totSIS)+'</span></div>'        +'<div class="trow"><span class="lbl">AFRMM<span class="aliq">'+(modal==='aereo'?'N&atilde;o aplic&aacute;vel (modal a&eacute;reo)':'Frete&times;C&acirc;mbio&times;8%+R$20 rateado')+'</span></span><span class="val">'+fR(totAFR)+'</span></div>'        +'<div class="trow"><span class="lbl">ICMS</span><span class="val">'+fR(totICMS)+'</span></div>'        +'<div class="tsub"><span>Subtotal impostos</span><span>'+fR(totIMP)+'</span></div>'      +'</div></div>';
+    document.getElementById('imp-wrap-print').innerHTML=printHtml;
+  })();
+
+  // IMPOSTO TOTAL POR NCM (ordem de inserção; só exibe quando há >1 NCM distinto)
+  var ncmOrder=[],ncmMap={};
+  itemData.forEach(function(x){
+    if(!ncmMap[x.ncm]){ncmOrder.push(x.ncm);ncmMap[x.ncm]={ncm:x.ncm,desc:x.desc,total:0,ii:0,ipi:0,pis:0,cofins:0,icms:0,afrmm:0,sis:0};}
+    ncmMap[x.ncm].total+=x.totalImp;ncmMap[x.ncm].ii+=x.ii;ncmMap[x.ncm].ipi+=x.ipi;
+    ncmMap[x.ncm].pis+=x.pis;ncmMap[x.ncm].cofins+=x.cofins;
+    ncmMap[x.ncm].icms+=x.icms;ncmMap[x.ncm].afrmm+=x.afrmmItem;ncmMap[x.ncm].sis+=x.sisItem;
+  });
+  var secNcm=document.getElementById('sec-ncm-total');
+  var ncmHtml='';
+  if(ncmOrder.length>1){
+    ncmOrder.forEach(function(ncm){
+      var n2=ncmMap[ncm];
+      ncmHtml+='<div class="ncm-total-block">'
+        +'<div class="ncm-total-title">IMPOSTO TOTAL NCM: '+n2.ncm+' &mdash; '+n2.desc+'</div>'
+        +'<div class="ncm-total-body">'
+          +'<div class="trow"><span class="lbl">Imposto de Importa&ccedil;&atilde;o</span><span class="val">'+fR(n2.ii)+'</span></div>'
+          +'<div class="trow"><span class="lbl">I.P.I.</span><span class="val">'+fR(n2.ipi)+'</span></div>'
+          +'<div class="trow"><span class="lbl">PIS</span><span class="val">'+fR(n2.pis)+'</span></div>'
+          +'<div class="trow"><span class="lbl">COFINS</span><span class="val">'+fR(n2.cofins)+'</span></div>'
+          +'<div class="trow"><span class="lbl">Taxa Siscomex</span><span class="val">'+fR(n2.sis)+'</span></div>'
+          +'<div class="trow"><span class="lbl">AFRMM</span><span class="val">'+fR(n2.afrmm)+'</span></div>'
+          +'<div class="trow"><span class="lbl">ICMS</span><span class="val">'+fR(n2.icms)+'</span></div>'
+          +'<div class="ncm-total-sub"><span>IMPOSTO TOTAL NCM '+n2.ncm+'</span><span>'+fR(n2.total)+'</span></div>'
+        +'</div></div>';
+    });
+    if(secNcm)secNcm.style.display='';
+  }else{
+    if(secNcm)secNcm.style.display='none';
+  }
+  document.getElementById('ncm-total-wrap').innerHTML=ncmHtml;
+
+  // DESPESAS
+  document.getElementById('desp-body').innerHTML=
+    despList.map(function(r){return '<div class="trow"><span class="lbl">'+r.nom+'</span><span class="val">'+fR(r.val)+'</span></div>';}).join('')
+    +'<div class="dsub"><span>2.1 &#8211; SUBTOTAL DESPESAS GERAIS</span><span>'+fR(totalDesp)+'</span></div>';
+
+  // TABELA RATEIO COMPLETO
+  var despCols=despList.filter(function(d){return d.val>0;});
+  var rdHtml='<thead><tr>'
+    +'<th class="L">N&#186;</th><th class="L">NCM</th><th class="L">Descri&ccedil;&atilde;o</th>'
+    +'<th>Qtd</th><th>% Rateio</th><th>VMLE (USD)</th><th>VMLE (R$)</th><th>Frete Rat. (R$)</th><th>CIF (R$)</th>'
+    +'<th>II (R$)</th><th>IPI (R$)</th><th>PIS (R$)</th><th>COFINS (R$)</th>'
+    +'<th>Siscomex</th><th>AFRMM</th>';
+  despCols.forEach(function(d){rdHtml+='<th>'+d.nom+'</th>';});
+  rdHtml+='<th>Imp. Fed+Est (R$)</th><th>Desp. Gerais (R$)</th><th>Custo Total (R$)</th><th>Custo Unit. (R$)</th></tr></thead><tbody>';
+  var totRD={vmle:0,fp:0,cif:0,ii:0,ipi:0,pis:0,cofins:0,sis:0,afrmm:0,imp:0,desp:0,total:0};
+  var despColTotals=despCols.map(function(){return 0;});
+  itemData.forEach(function(x,idx){
+    var pct=totalFOB_USD>0?(x.fobUSD/totalFOB_USD*100):0;
+    var despItem=0;
+    var despItemVals=despCols.map(function(d){
+      var v=totalCIF_BRL>0?(x.cifBRL/totalCIF_BRL)*d.val:0;despItem+=v;return v;
+    });
+    var custoTotal=x.totalImp+despItem;
+    var custoUnit=x.qtdItem>0?custoTotal/x.qtdItem:0;
+    totRD.vmle+=x.fobBRL;totRD.fp+=x.fpBRL;totRD.cif+=x.cifBRL;
+    totRD.ii+=x.ii;totRD.ipi+=x.ipi;totRD.pis+=x.pis;totRD.cofins+=x.cofins;
+    totRD.sis+=x.sisItem;totRD.afrmm+=x.afrmmItem;totRD.imp+=x.totalImp;
+    totRD.desp+=despItem;totRD.total+=custoTotal;
+    despItemVals.forEach(function(v,i){despColTotals[i]+=v;});
+    rdHtml+='<tr>'
+      +'<td class="L">'+(idx+1)+'</td><td class="L">'+x.ncm+'</td><td class="L">'+x.desc+'</td>'
+      +'<td>'+(x.qtdItem>0?x.qtdItem.toLocaleString('pt-BR'):'-')+'</td>'
+      +'<td>'+fPct(pct)+'</td>'
+      +'<td>'+fU(x.fobUSD)+'</td>'
+      +'<td>'+fR(x.fobBRL)+'</td><td>'+fR(x.fpBRL)+'</td><td>'+fR(x.cifBRL)+'</td>'
+      +'<td>'+fR(x.ii)+'</td><td>'+fR(x.ipi)+'</td><td>'+fR(x.pis)+'</td><td>'+fR(x.cofins)+'</td>'
+      +'<td>'+fR(x.sisItem)+'</td><td>'+fR(x.afrmmItem)+'</td>';
+    despItemVals.forEach(function(v){rdHtml+='<td>'+fR(v)+'</td>';});
+    rdHtml+='<td style="font-weight:600">'+fR(x.totalImp)+'</td>'
+      +'<td>'+fR(despItem)+'</td>'
+      +'<td style="font-weight:700">'+fR(custoTotal)+'</td>'
+      +'<td style="font-weight:700;color:#0d2d5e">'+(x.qtdItem>0?fR(custoUnit):'-')+'</td>'
+      +'</tr>';
+  });
+  rdHtml+='<tr class="ttr"><td class="L" colspan="3">TOTAIS</td>'
+    +'<td>-</td><td>100,00%</td>'
+    +'<td>'+fU(totalFOB_USD)+'</td>'
+    +'<td>'+fR(totRD.vmle)+'</td><td>'+fR(totRD.fp)+'</td><td>'+fR(totRD.cif)+'</td>'
+    +'<td>'+fR(totRD.ii)+'</td><td>'+fR(totRD.ipi)+'</td><td>'+fR(totRD.pis)+'</td><td>'+fR(totRD.cofins)+'</td>'
+    +'<td>'+fR(totRD.sis)+'</td><td>'+fR(totRD.afrmm)+'</td>';
+  despColTotals.forEach(function(v){rdHtml+='<td>'+fR(v)+'</td>';});
+  rdHtml+='<td>'+fR(totRD.imp)+'</td><td>'+fR(totRD.desp)+'</td><td>'+fR(totRD.total)+'</td><td>-</td></tr></tbody>';
+  document.getElementById('rdtable').innerHTML=rdHtml;
+
+  // RESUMO
+  document.getElementById('resumo-rows').innerHTML=
+    '<div class="resumo-row"><span>Valor do Produto (VMLE) <span style="font-size:10px;color:#aab3bd">&#8212; pago diretamente ao fornecedor</span></span><span style="color:#aab3bd">'+fR(totalFOB_BRL)+'</span></div>'
+    +'<div class="resumo-row"><span>Total Impostos Federais + Estaduais</span><span style="font-weight:700">'+fR(totalImpAll)+'</span></div>'
+    +'<div class="resumo-row"><span>Subtotal Despesas Gerais</span><span style="font-weight:700">'+fR(totalDesp)+'</span></div>';
+
+  document.getElementById('grand-total').innerHTML=
+    '<div class="gt-lbl">TOTAL DE IMPOSTOS (FEDERAIS + ESTADUAIS) + DESPESAS</div>'
+    +'<div class="gt-val">'+fR(grandTotal)+'</div>'
+    +'<div class="gt-sub">DATA: '+hoje+' &nbsp;&middot;&nbsp; C&acirc;mbio: R$ '+cambio.toFixed(4)+' &nbsp;&middot;&nbsp; Siscomex ('+adicoes+' adi&ccedil;&otilde;es): '+fR(sisTotal)+' &nbsp;&middot;&nbsp; AFRMM: '+fR(afrmmTotal)+'</div>';
+
+  // CUSTO UNITÁRIO POR NCM + GERAL
+  // Custo por NCM: só exibe se o NCM tiver qtdItem preenchida
+  var ucHtml='';
+  var algumCustoNCM=false;
+  if(ncmOrder.length>1){
+    ncmOrder.forEach(function(ncm){
+      var itensNCM=itemData.filter(function(x){return x.ncm===ncm;});
+      var qtdNCM=0,impNCM=0,despNCM=0;
+      itensNCM.forEach(function(x){
+        qtdNCM+=x.qtdItem;impNCM+=x.totalImp;
+        despCols.forEach(function(d){despNCM+=totalCIF_BRL>0?(x.cifBRL/totalCIF_BRL)*d.val:0;});
+      });
+      var custoNCM=impNCM+despNCM;
+      if(qtdNCM>0){
+        algumCustoNCM=true;
+        ucHtml+='<div class="unit-card" style="margin-bottom:8px">'
+          +'<div><div class="uc-lbl">Custo unit&#225;rio &#8212; NCM '+ncm+' ('+ncmMap[ncm].desc+')</div>'
+          +'<div class="uc-qty">Impostos + despesas rateadas &divide; '+qtdNCM.toLocaleString('pt-BR')+' pe&ccedil;as</div></div>'
+          +'<div class="uc-val">'+fR(custoNCM/qtdNCM)+'</div>'
+          +'</div>';
+      }
+    });
+  }
+  // Card geral: só exibe quando NÃO há custo por NCM (1 só NCM) OU quando qtdTotal foi preenchido
+  var qtdSomada=itemData.reduce(function(s,x){return s+(x.qtdItem||0);},0);
+  var qtdParaGeral=qtdSomada>0?qtdSomada:(qtdTotal||1);
+  if(!algumCustoNCM){
+    ucHtml+='<div class="unit-card">'
+      +'<div><div class="uc-lbl">Custo unit&#225;rio de importa&ccedil;&atilde;o</div>'
+      +'<div class="uc-qty">Total (impostos + despesas) &divide; '+qtdParaGeral.toLocaleString('pt-BR')+' unidade(s)</div></div>'
+      +'<div class="uc-val">'+fR(grandTotal/qtdParaGeral)+'</div>'
+      +'</div>';
+  }
+  document.getElementById('unit-cards-wrap').innerHTML=ucHtml;
+
+  var obs=gs('f_obs');var obEl=document.getElementById('obs-box');
+  if(obs){obEl.innerHTML='<strong>OBSERVA&Ccedil;&Otilde;ES</strong>'+obs.replace(/\n/g,'<br>');obEl.style.display='block';}
+  else{obEl.style.display='none';}
+
+  lastCalc={itemData:itemData,ncmOrder:ncmOrder,ncmMap:ncmMap,despList:despList,despCols:despCols,
+    totalDesp:totalDesp,grandTotal:grandTotal,unitarioGeral:unitarioGeral,
+    totalImpAll:totalImpAll,totalFOB_BRL:totalFOB_BRL,totalCIF_BRL:totalCIF_BRL,
+    totalFOB_USD:totalFOB_USD,freteUSD:freteUSD,freteBRL:freteBRL,
+    cambio:cambio,sisTotal:sisTotal,adicoes:adicoes,afrmmTotal:afrmmTotal,modal:modal,
+    qtdTotal:qtdTotal,hoje:hoje,
+    imp:gs('f_imp'),exp:gs('f_exp'),prod:gs('f_prod'),inv:gs('f_inv'),
+    porig:gs('f_porig'),pdest:gs('f_pdest')};
+
+  document.getElementById('resultado').classList.add('show');
+  document.getElementById('resultado').scrollIntoView({behavior:'smooth',block:'start'});
+  // Mostrar área de avisos pós-resultado e aviso estimativo
+  document.getElementById('area-pos-resultado').style.display='block';
+  var avisoEl=document.getElementById('aviso-estimativo');
+  if(avisoEl)avisoEl.style.display='block';
+  // ── Incrementar contador de estudos ──
+  window.__incrementarEstudo && window.__incrementarEstudo().catch(()=>{});
+}
+
+function limpar(){
+  document.getElementById('resultado').classList.remove('show');
+  document.getElementById('area-pos-resultado').style.display='none';
+  var avisoEl=document.getElementById('aviso-estimativo');
+  if(avisoEl)avisoEl.style.display='none';
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function abrirModal(){
+  if(!document.getElementById('resultado').classList.contains('show')){alert('Calcule o estudo primeiro.');return;}
+  const plano = window.__planoAtual || 'free';
+  if(plano === 'free'){
+    // Mostrar banner de upgrade em vez do modal
+    const msg = document.getElementById('limite-msg');
+    if(msg) msg.textContent = 'Exportação PDF e Excel disponível nos planos Pro e Premium.';
+    document.getElementById('limite-banner').style.display = 'block';
+    window.scrollTo({top:0,behavior:'smooth'});
+    return;
+  }
+  document.getElementById('modal').classList.add('show');
+}
+function fecharModal(){document.getElementById('modal').classList.remove('show');}
+
+function confirmarPDF(){
+  fecharModal();
+  // Preparar: ocultar seções que não vão no PDF, mostrar header/footer de impressão
+  document.getElementById('sec-rateio-desp').style.display='none';
+  document.getElementById('sec-resumo').style.display='none';
+  document.getElementById('pdf-header').style.display='block';
+  document.getElementById('pdf-footer').style.display='block';
+  // Ocultar área de avisos e mostrar rodapé comercial no PDF
+  var areaPosEl=document.getElementById('area-pos-resultado');
+  if(areaPosEl)areaPosEl.style.display='none';
+  var rodapeComEl=document.getElementById('pdf-rodape-comercial');
+  if(rodapeComEl)rodapeComEl.style.display='block';
+  // Clonar grand-total, unit-cards e obs-box para aparecerem no PDF
+  var pdfArea=document.getElementById('pdf-area');
+  var pdfFooterEl=document.getElementById('pdf-footer');
+  var gtClone=document.getElementById('grand-total').cloneNode(true);
+  var ucClone=document.getElementById('unit-cards-wrap').cloneNode(true);
+  var obClone=document.getElementById('obs-box').cloneNode(true);
+  gtClone.id='gt-print-clone';ucClone.id='uc-print-clone';obClone.id='ob-print-clone';
+  pdfArea.insertBefore(obClone,pdfFooterEl);
+  pdfArea.insertBefore(ucClone,pdfFooterEl);
+  pdfArea.insertBefore(gtClone,pdfFooterEl);
+  // Disparar impressão e restaurar depois
+  setTimeout(function(){
+    window.print();
+    setTimeout(function(){
+      pdfArea.removeChild(gtClone);
+      pdfArea.removeChild(ucClone);
+      pdfArea.removeChild(obClone);
+      document.getElementById('pdf-header').style.display='none';
+      document.getElementById('pdf-footer').style.display='none';
+      document.getElementById('sec-rateio-desp').style.display='';
+      document.getElementById('sec-resumo').style.display='';
+      var areaPosEl2=document.getElementById('area-pos-resultado');
+      if(areaPosEl2)areaPosEl2.style.display='block';
+      var rodapeComEl2=document.getElementById('pdf-rodape-comercial');
+      if(rodapeComEl2)rodapeComEl2.style.display='none';
+    },500);
+  },200);
+}
+
+function confirmarXLSX(){
+  if(!lastCalc){alert('Calcule o estudo primeiro.');return;}
+  document.getElementById('loading').textContent='Gerando Excel, aguarde...';
+  document.getElementById('loading').classList.add('show');
+  try{
+    var c=lastCalc;
+    var wb=XLSX.utils.book_new();
+    var rows=[];
+    rows.push(['IMPORTACERTO - ESTUDO DE VIABILIDADE DE IMPORTACAO']);
+    rows.push([]);
+    rows.push(['Data:',c.hoje,'','Cambio (R$/USD):',c.cambio]);
+    rows.push(['Importador:',c.imp,'','Exportador:',c.exp]);
+    rows.push(['Produto:',c.prod,'','Invoice(s):',c.inv]);
+    rows.push(['Porto Origem:',c.porig,'','Porto Destino:',c.pdest]);
+    rows.push(['FOB Total (USD):',c.totalFOB_USD,'','FOB Total (R$):',c.totalFOB_BRL]);
+    rows.push(['Frete (USD):',c.freteUSD,'','Frete (R$):',c.freteBRL]);
+    rows.push(['Valor Aduaneiro (R$):',c.totalCIF_BRL,'','Siscomex ('+c.adicoes+' adicoes):',c.sisTotal]);
+    rows.push(['AFRMM (R$):',c.afrmmTotal,'','Modal:',(c.modal==='aereo'?'Aereo':'Maritimo')]);
+    rows.push([]);
+    var hdr=['No','NCM','Descricao','Qtd (pcs)','% Rateio (FOB)','VMLE (USD)',
+      'VMLE (R$)','Frete Rat. (R$)','Valor CIF (R$)',
+      'II (R$)','IPI (R$)','PIS (R$)','COFINS (R$)','Siscomex (R$)','AFRMM (R$)'];
+    c.despCols.forEach(function(d){hdr.push(d.nom.replace(/&[^;]+;/g,'')+' (R$)');});
+    hdr.push('Imp. Fed+Est (R$)','Despesas Gerais (R$)','Custo Total (R$)','Custo Unit. (R$)');
+    rows.push(hdr);
+    var totRow={vmleUsd:0,vmle:0,fp:0,cif:0,ii:0,ipi:0,pis:0,cofins:0,sis:0,afrmm:0,imp:0,desp:0,total:0};
+    var despColTotals=c.despCols.map(function(){return 0;});
+    c.itemData.forEach(function(x,idx){
+      var pct=c.totalFOB_USD>0?(x.fobUSD/c.totalFOB_USD*100):0;
+      var despItem=0;
+      var despItemVals=c.despCols.map(function(d){
+        var v=c.totalCIF_BRL>0?(x.cifBRL/c.totalCIF_BRL)*d.val:0;despItem+=v;return v;
+      });
+      var custoTotal=x.totalImp+despItem;
+      var custoUnit=x.qtdItem>0?custoTotal/x.qtdItem:null;
+      var row=[idx+1,x.ncm,x.desc,x.qtdItem||null,pct/100,x.fobUSD,
+        x.fobBRL,x.fpBRL,x.cifBRL,x.ii,x.ipi,x.pis,x.cofins,x.sisItem,x.afrmmItem];
+      despItemVals.forEach(function(v,i){row.push(v);despColTotals[i]+=v;});
+      row.push(x.totalImp,despItem,custoTotal,custoUnit);
+      totRow.vmleUsd+=x.fobUSD;totRow.vmle+=x.fobBRL;totRow.fp+=x.fpBRL;totRow.cif+=x.cifBRL;
+      totRow.ii+=x.ii;totRow.ipi+=x.ipi;totRow.pis+=x.pis;totRow.cofins+=x.cofins;
+      totRow.sis+=x.sisItem;totRow.afrmm+=x.afrmmItem;totRow.imp+=x.totalImp;
+      totRow.desp+=despItem;totRow.total+=custoTotal;
+      rows.push(row);
+    });
+    var totLine=['TOTAIS','','',null,1,totRow.vmleUsd,totRow.vmle,totRow.fp,totRow.cif,
+      totRow.ii,totRow.ipi,totRow.pis,totRow.cofins,totRow.sis,totRow.afrmm];
+    despColTotals.forEach(function(v){totLine.push(v);});
+    totLine.push(totRow.imp,totRow.desp,totRow.total,null);
+    rows.push(totLine);rows.push([]);
+    rows.push(['RESUMO']);
+    rows.push(['Valor Produto - VMLE (pago ao fornecedor)',c.totalFOB_BRL]);
+    rows.push(['Total Impostos Federais + Estaduais',c.totalImpAll]);
+    rows.push(['Subtotal Despesas Gerais',c.totalDesp]);
+    rows.push(['TOTAL GLOBAL (Impostos + Despesas)',c.grandTotal]);
+    rows.push(['Custo Unitario Geral (div '+c.qtdTotal+' unidades)',c.unitarioGeral]);
+    var ws=XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols']=[{wch:4},{wch:12},{wch:28},{wch:10},{wch:12},{wch:13},
+      {wch:14},{wch:14},{wch:14},{wch:13},{wch:13},{wch:13},{wch:13},{wch:13},{wch:13}];
+    c.despCols.forEach(function(){ws['!cols'].push({wch:18});});
+    ws['!cols'].push({wch:22},{wch:18},{wch:16},{wch:14});
+    XLSX.utils.book_append_sheet(wb,ws,'Estudo Detalhado');
+    var imp2=(c.imp||'Estudo').replace(/[^a-zA-Z0-9]/g,'_').substring(0,30);
+    var dt2=new Date().toLocaleDateString('pt-BR').replace(/\//g,'-');
+    XLSX.writeFile(wb,'Estudo_Detalhado_'+imp2+'_'+dt2+'.xlsx');
+  }catch(e){alert('Erro XLSX: '+e.message);}
+  document.getElementById('loading').classList.remove('show');
+  fecharModal();
+}
+
+/* =========================================================
+   ESTUDOS SALVOS (persistência na nuvem via Firestore)
+   Captura todo o estado do formulário (não apenas o resultado
+   calculado) para permitir reabrir e editar depois, de qualquer
+   computador, bastando estar logado.
+   ========================================================= */
+var estudoAtualId=null;
+var estudosCache=[]; // cache em memória da última listagem, usado para renderizar a UI
+
+function showToast(msg){
+  var t=document.getElementById('save-toast');
+  t.textContent=msg;t.classList.add('show');
+  clearTimeout(t._tm);
+  t._tm=setTimeout(function(){t.classList.remove('show');},2600);
+}
+
+// Captura o estado atual de TODO o formulário (dados gerais, frete/câmbio,
+// modal de transporte, itens/NCMs, despesas e despesas extras)
+function capturarEstadoForm(){
+  var extras=extraIds.map(function(eid){
+    return{nom:gs('ex_nom-'+eid),val:gs('ex_val-'+eid)};
+  });
+  var itensForm=items.map(function(id){
+    return{
+      inv:gs('i_inv-'+id),desc:gs('i_desc-'+id),ncm:gs('i_ncm-'+id),
+      fob:gs('i_fob-'+id),ii:gs('i_ii-'+id),ipi:gs('i_ipi-'+id),
+      pis:gs('i_pis-'+id),cof:gs('i_cof-'+id),icms:gs('i_icms-'+id),
+      qtd:gs('i_qtd-'+id),red:gs('i_red-'+id),
+      icmstp:document.getElementById('i_icmstp-'+id)?document.getElementById('i_icmstp-'+id).value:'normal'
+    };
+  });
+  return{
+    imp:gs('f_imp'),exp:gs('f_exp'),prod:gs('f_prod'),inv:gs('f_inv'),
+    porig:gs('f_porig'),pdest:gs('f_pdest'),obs:gs('f_obs'),
+    frete:gs('f_frete'),cambio:gs('f_cambio'),qtd:gs('f_qtd'),
+    adicoes:document.getElementById('f_adicoes').value,
+    modal:document.getElementById('f_modal')?document.getElementById('f_modal').value:'maritimo',
+    d_taxas:gs('d_taxas'),d_port:gs('d_port'),d_rod:gs('d_rod'),
+    d_hon:gs('d_hon'),d_out:gs('d_out'),
+    itens:itensForm,extras:extras
+  };
+}
+
+// Restaura o formulário inteiro a partir de um estado salvo
+function restaurarEstadoForm(st){
+  // limpa itens e despesas extras atuais
+  items.slice().forEach(function(id){remItem(id);});
+  extraIds.slice().forEach(function(eid){remExtra(eid);});
+  document.getElementById('items-wrap').innerHTML='';
+  document.getElementById('extras-wrap').innerHTML='';
+  items=[];extraIds=[];
+
+  document.getElementById('f_imp').value=st.imp||'';
+  document.getElementById('f_exp').value=st.exp||'';
+  document.getElementById('f_prod').value=st.prod||'';
+  document.getElementById('f_inv').value=st.inv||'';
+  document.getElementById('f_porig').value=st.porig||'';
+  document.getElementById('f_pdest').value=st.pdest||'';
+  document.getElementById('f_obs').value=st.obs||'';
+  document.getElementById('f_frete').value=st.frete||'';
+  document.getElementById('f_cambio').value=st.cambio||'';
+  document.getElementById('f_qtd').value=st.qtd||'1';
+  if(st.adicoes){document.getElementById('f_adicoes').value=st.adicoes;}
+  atualizarSiscomex();
+  if(document.getElementById('f_modal')){
+    document.getElementById('f_modal').value=st.modal||'maritimo';
+    atualizarModal();
+  }
+  document.getElementById('d_taxas').value=st.d_taxas||'0';
+  document.getElementById('d_port').value=st.d_port||'0';
+  document.getElementById('d_rod').value=st.d_rod||'0';
+  document.getElementById('d_hon').value=st.d_hon||'0';
+  document.getElementById('d_out').value=st.d_out||'0';
+
+  (st.itens||[]).forEach(function(it){addItem(it);});
+  if(!(st.itens||[]).length){addItem();}
+  (st.extras||[]).forEach(function(ex){addExtra(ex.nom,ex.val);});
+
+  document.getElementById('resultado').classList.remove('show');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+async function abrirModalEstudos(){
+  document.getElementById('estudo-nome-novo').value='';
+  var wrap=document.getElementById('estudos-list');
+  wrap.innerHTML='<div class="estudos-empty">Carregando estudos…</div>';
+  document.getElementById('modal-estudos').classList.add('show');
+
+  try{
+    estudosCache=await window.__firestoreListarEstudos();
+  }catch(e){
+    wrap.innerHTML='<div class="estudos-empty">Erro ao carregar estudos: '+escHtml(e.message)+'</div>';
+    return;
+  }
+
+  var updRow=document.getElementById('estudo-update-row');
+  if(estudoAtualId){
+    var atual=estudosCache.find(function(e){return e.id===estudoAtualId;});
+    if(atual){
+      updRow.style.display='flex';
+      updRow.querySelector('button').textContent='\uD83D\uDCBE Atualizar "'+atual.nome+'"';
+    }else{
+      estudoAtualId=null;
+      updRow.style.display='none';
+    }
+  }else{
+    updRow.style.display='none';
+  }
+  renderListaEstudos();
+}
+function fecharModalEstudos(){document.getElementById('modal-estudos').classList.remove('show');}
+
+function escHtml(s){
+  return String(s==null?'':s).replace(/[&<>"']/g,function(c){
+    return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+
+function renderListaEstudos(){
+  var wrap=document.getElementById('estudos-list');
+  if(!estudosCache.length){
+    wrap.innerHTML='<div class="estudos-empty">Nenhum estudo salvo ainda.<br>Preencha o formulário e clique em "Salvar como novo".</div>';
+    return;
+  }
+  // mais recentes primeiro
+  var ordenada=estudosCache.slice().sort(function(a,b){return (b.atualizadoEm||0)-(a.atualizadoEm||0);});
+  var html='';
+  ordenada.forEach(function(e){
+    var dt=e.atualizadoEm?new Date(e.atualizadoEm).toLocaleDateString('pt-BR')+' '+new Date(e.atualizadoEm).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'';
+    var modalLbl=(e.estado&&e.estado.modal==='aereo')?'A&#233;reo':'Mar&#237;timo';
+    html+='<div class="estudo-row">'
+      +'<div class="estudo-info">'
+        +'<div class="estudo-nome">'+escHtml(e.nome||'(sem nome)')+'</div>'
+        +'<div class="estudo-meta">'+modalLbl+' &nbsp;&middot;&nbsp; Atualizado: '+dt+'</div>'
+      +'</div>'
+      +'<div class="estudo-btns">'
+        +'<button class="ebtn ebtn-load" data-estudo-id="'+e.id+'" data-action="load">Abrir</button>'
+        +'<button class="ebtn ebtn-del" data-estudo-id="'+e.id+'" data-action="del">Excluir</button>'
+      +'</div>'
+    +'</div>';
+  });
+  wrap.innerHTML=html;
+}
+
+// Delegação de eventos: evita problemas de escaping ao montar onclick com nomes/ids dinâmicos
+document.addEventListener('click',function(ev){
+  var btn=ev.target.closest&&ev.target.closest('[data-estudo-id]');
+  if(!btn)return;
+  var id=btn.getAttribute('data-estudo-id');
+  var action=btn.getAttribute('data-action');
+  if(action==='load')carregarEstudo(id);
+  else if(action==='del')excluirEstudo(id);
+});
+
+async function salvarEstudoAtual(){
+  var nomeInput=document.getElementById('estudo-nome-novo').value.trim();
+  var estado=capturarEstadoForm();
+  if(!estado.itens.length){alert('Adicione ao menos um item antes de salvar.');return;}
+  var nome=nomeInput||(estado.imp||'Estudo sem nome')+(estado.inv?(' — '+estado.inv):'');
+  var btn=document.getElementById('estudo-nome-novo').nextElementSibling;
+  var textoOriginal=btn?btn.textContent:'';
+  if(btn){btn.disabled=true;btn.textContent='Salvando…';}
+  try{
+    var novoId=await window.__firestoreSalvarEstudo(null,nome,estado,true);
+    estudoAtualId=novoId;
+    showToast('Estudo "'+nome+'" salvo com sucesso.');
+    document.getElementById('estudo-nome-novo').value='';
+    var updRow=document.getElementById('estudo-update-row');
+    updRow.style.display='flex';
+    updRow.querySelector('button').textContent='\uD83D\uDCBE Atualizar "'+nome+'"';
+    estudosCache=await window.__firestoreListarEstudos();
+    renderListaEstudos();
+  }catch(e){
+    alert('Não foi possível salvar o estudo: '+e.message);
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent=textoOriginal;}
+  }
+}
+
+// Salva alterações sobre um estudo já existente (mesmo id), preservando o histórico de criação
+async function atualizarEstudoExistente(id){
+  var estado=capturarEstadoForm();
+  if(!estado.itens.length){alert('Adicione ao menos um item antes de salvar.');return;}
+  var atual=estudosCache.find(function(e){return e.id===id;});
+  var nome=atual?atual.nome:'Estudo';
+  var updRow=document.getElementById('estudo-update-row');
+  var btn=updRow.querySelector('button');
+  var textoOriginal=btn.textContent;
+  btn.disabled=true;btn.textContent='Atualizando…';
+  try{
+    await window.__firestoreSalvarEstudo(id,nome,estado,false);
+    showToast('Estudo "'+nome+'" atualizado com sucesso.');
+  }catch(e){
+    alert('Não foi possível atualizar o estudo: '+e.message);
+  }finally{
+    btn.disabled=false;btn.textContent=textoOriginal;
+  }
+}
+
+async function carregarEstudo(id){
+  var item=estudosCache.find(function(e){return e.id===id;});
+  if(!item){alert('Estudo não encontrado.');return;}
+  if(items.length&&!confirm('Carregar este estudo vai substituir os dados atuais do formulário. Deseja continuar?')){return;}
+  restaurarEstadoForm(item.estado);
+  estudoAtualId=id;
+  fecharModalEstudos();
+  showToast('Estudo "'+item.nome+'" carregado. Altere e clique em Estudos Salvos > Atualizar para regravar.');
+}
+
+async function excluirEstudo(id){
+  var item=estudosCache.find(function(e){return e.id===id;});
+  if(!item)return;
+  if(!confirm('Excluir o estudo "'+item.nome+'"? Esta ação não pode ser desfeita.'))return;
+  try{
+    await window.__firestoreExcluirEstudo(id);
+    estudosCache=estudosCache.filter(function(e){return e.id!==id;});
+    if(estudoAtualId===id)estudoAtualId=null;
+    renderListaEstudos();
+  }catch(e){
+    alert('Não foi possível excluir o estudo: '+e.message);
+  }
+}
+
+
+
+/* =========================================================
+   BANCO NCM — consulta automática de alíquotas no Firestore
+   Coleção: ncm_aliquotas
+   Campos do documento: ii, ipi, pis, cofins, descricao
+   ID do doc: NCM de 8 dígitos (ex: "85322590")
+   ========================================================= */
+var _ncmCache = {}; // cache em memória para evitar consultas repetidas
+
+async function onNcmInput(id, valor) {
+  var ncm = valor.replace(/[^0-9]/g,'');
+  var statusEl = document.getElementById('ncm-status-'+id);
+  var fillBtn  = document.getElementById('ncm-fill-btn-'+id);
+
+  // Limpar estado anterior
+  if(statusEl){ statusEl.className='ncm-status'; statusEl.textContent=''; }
+  if(fillBtn)  { fillBtn.classList.remove('show'); }
+  if(fillBtn)  { fillBtn._ncmData = null; }
+
+  // Só busca quando tiver 8 dígitos
+  if(ncm.length < 8) return;
+
+  // Checar cache
+  var ncm8 = ncm.substring(0,8);
+  if(_ncmCache[ncm8] !== undefined) {
+    _aplicarResultadoNCM(id, ncm8, _ncmCache[ncm8]);
+    return;
+  }
+
+  // Mostrar loading
+  if(statusEl){ statusEl.className='ncm-status loading'; statusEl.textContent='🔍 Consultando banco de NCMs…'; }
+
+  try {
+    if(!window.__buscarNCM) throw new Error('Módulo NCM não disponível');
+    var dados = await window.__buscarNCM(ncm8);
+    _ncmCache[ncm8] = dados; // guardar no cache (null = não encontrado)
+    _aplicarResultadoNCM(id, ncm8, dados);
+  } catch(e) {
+    if(statusEl){ statusEl.className='ncm-status err'; statusEl.textContent='Erro ao consultar: '+e.message; }
+  }
+}
+
+function _aplicarResultadoNCM(id, ncm8, dados) {
+  var statusEl = document.getElementById('ncm-status-'+id);
+  var fillBtn  = document.getElementById('ncm-fill-btn-'+id);
+
+  if(!dados) {
+    if(statusEl){ statusEl.className='ncm-status err'; statusEl.textContent='NCM '+ ncm8 +' não encontrado no banco. Preencha manualmente.'; }
+    return;
+  }
+
+  var desc = dados.descricao ? ' — '+dados.descricao : '';
+  if(statusEl){
+    statusEl.className='ncm-status ok';
+    statusEl.textContent='✔ NCM encontrado'+ desc
+      +' | II: '+dados.ii+'% · IPI: '+dados.ipi+'% · PIS: '+dados.pis+'% · COFINS: '+dados.cofins+'%';
+  }
+  if(fillBtn){
+    fillBtn.classList.add('show');
+    fillBtn._ncmData = dados;
+  }
+}
+
+function preencherAliquotas(id) {
+  var fillBtn = document.getElementById('ncm-fill-btn-'+id);
+  if(!fillBtn || !fillBtn._ncmData) return;
+  var d = fillBtn._ncmData;
+  var set = function(fieldId, val){
+    var el = document.getElementById(fieldId);
+    if(el && (val !== null && val !== undefined)) el.value = val;
+  };
+  set('i_ii-'+id,    d.ii    !== undefined ? d.ii    : '');
+  set('i_ipi-'+id,   d.ipi   !== undefined ? d.ipi   : '');
+  set('i_pis-'+id,   d.pis   !== undefined ? d.pis   : '');
+  set('i_cof-'+id,   d.cofins!== undefined ? d.cofins: '');
+  if(d.icms !== undefined && d.icms !== null) set('i_icms-'+id, d.icms);
+  // Preencher descrição se o campo estiver vazio
+  var descEl = document.getElementById('i_desc-'+id);
+  if(descEl && !descEl.value && d.descricao) descEl.value = d.descricao;
+  // Feedback visual breve no botão
+  fillBtn.textContent = '✔ Preenchido!';
+  fillBtn.style.background = '#E1F5EE';
+  fillBtn.style.color = '#0F6E56';
+  setTimeout(function(){
+    fillBtn.textContent = '✔ Preencher alíquotas automático';
+    fillBtn.style.background = '';
+    fillBtn.style.color = '';
+  }, 2000);
+}
+
+/* =========================================================
+   PTAX AUTOMÁTICA — API pública do Banco Central do Brasil
+   Endpoint: ptax.bcb.gov.br (sem necessidade de autenticação)
+   ========================================================= */
+async function buscarPTAX() {
+  var btn  = document.getElementById('btn-ptax');
+  var info = document.getElementById('ptax-info');
+  var inp  = document.getElementById('f_cambio');
+  if(!btn || !inp) return;
+  btn.disabled = true;
+  btn.textContent = '\u23f3 Buscando\u2026';
+  if(info) info.textContent = '';
+  try {
+    var ptax = null, dataUsada = '';
+    // Fonte 1: OData BCB (CORS liberado)
+    for(var i = 0; i <= 5; i++) {
+      var d = new Date();
+      d.setDate(d.getDate() - i);
+      if(d.getDay()===0) d.setDate(d.getDate()-1);
+      if(d.getDay()===6) d.setDate(d.getDate()-1);
+      var mm = String(d.getMonth()+1).padStart(2,'0');
+      var dd2 = String(d.getDate()).padStart(2,'0');
+      var yyyy = d.getFullYear();
+      var dataFmt = mm+'-'+dd2+'-'+yyyy;
+      var dataExib = dd2+'/'+mm+'/'+yyyy;
+      try {
+        var enc = encodeURIComponent;
+        var url = 'https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/'
+          + 'CotacaoMoedaDia(moeda=@moeda,dataCotacao=@data)'
+          + '?@moeda=' + enc("'USD'")
+          + '&@data=' + enc("'"+dataFmt+"'")
+          + '&$top=1&$orderby=dataHoraCotacao%20desc&$format=json&$select=cotacaoCompra,dataHoraCotacao';
+        var resp = await fetch(url);
+        if(!resp.ok) continue;
+        var jdata = await resp.json();
+        if(jdata.value && jdata.value.length > 0) {
+          ptax = jdata.value[0].cotacaoVenda;
+          dataUsada = dataExib + ' ' + (jdata.value[0].dataHoraCotacao||'').substring(11,16);
+          break;
+        }
+      } catch(e2) { continue; }
+    }
+    // Fonte 2: AwesomeAPI (fallback, CORS OK)
+    if(!ptax) {
+      try {
+        var r2 = await fetch('https://economia.awesomeapi.com.br/json/last/USD-BRL');
+        var j2 = await r2.json();
+        if(j2['USDBRL'] && j2['USDBRL'].bid) {
+          ptax = parseFloat(j2['USDBRL'].bid);
+          dataUsada = 'agora (AwesomeAPI)';
+        }
+      } catch(e3) {}
+    }
+    if(ptax) {
+      inp.value = parseFloat(ptax).toFixed(4);
+      if(info){ info.textContent = '\ud83d\udce1 PTAX venda em ' + dataUsada + ' \u2014 fonte: BCB'; info.style.color='#0F6E56'; }
+    } else {
+      if(info){ info.textContent = 'PTAX indispon\u00edvel. Preencha manualmente.'; info.style.color='#791F1F'; }
+    }
+  } catch(e) {
+    if(info){ info.textContent = 'Erro: '+e.message; info.style.color='#791F1F'; }
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '\ud83d\udce1 PTAX';
+  }
+}
+
+function abrirModalValidacao(){
+  document.getElementById('val-observacao').value='';
+  document.getElementById('validacao-form-area').style.display='block';
+  document.getElementById('validacao-sucesso').style.display='none';
+  document.getElementById('modal-validacao').classList.add('show');
+}
+function fecharModalValidacao(){
+  document.getElementById('modal-validacao').classList.remove('show');
+}
+
+async function enviarValidacao(){
+  var btn=document.getElementById('btn-enviar-analise');
+  btn.disabled=true;btn.textContent='Enviando…';
+
+  try{
+    // Montar dados do lead a partir do estudo atual
+    var obs=document.getElementById('val-observacao').value.trim();
+    var hoje=new Date().toISOString().split('T')[0];
+
+    // Gerar ID do estudo no padrão EVI-YYYY-NNNNN
+    var ano=new Date().getFullYear();
+    var rand=String(Math.floor(Math.random()*99999)).padStart(5,'0');
+    var estudoId='EVI-'+ano+'-'+rand;
+
+    // Coletar NCMs dos itens do formulário
+    var ncmList=[];
+    var itemEls=document.querySelectorAll('[id^="i_ncm-"]');
+    itemEls.forEach(function(el){if(el.value)ncmList.push(el.value);});
+
+    // Dados do usuário logado
+    var uid=window.__currentUser&&window.__currentUser.uid||'';
+    var email=window.__currentUser&&window.__currentUser.email||'';
+    var nome=window.__currentUser&&window.__currentUser.displayName||'';
+    var empresa=document.getElementById('f_imp')?document.getElementById('f_imp').value:'';
+    var fob=document.getElementById('f_frete')&&lastCalc?'USD '+lastCalc.totalFOB_USD.toFixed(2):'';
+    var cambio=document.getElementById('f_cambio')?document.getElementById('f_cambio').value:'';
+
+    var lead={
+      userId:uid,
+      estudoId:estudoId,
+      nome:nome,
+      empresa:empresa,
+      email:email,
+      whatsapp:'',
+      ncms:ncmList,
+      valorFob:fob,
+      cambio:cambio,
+      observacao:obs,
+      status:'Novo',
+      dataSolicitacao:hoje
+    };
+
+    // Salvar no Firestore – coleção leads_especializados
+    await window.__salvarLeadEspecializado(lead);
+
+    // Mostrar sucesso
+    document.getElementById('validacao-form-area').style.display='none';
+    document.getElementById('validacao-sucesso').style.display='block';
+  }catch(e){
+    alert('Ocorreu um erro ao enviar sua solicitação. Tente novamente.');
+    console.error(e);
+  }finally{
+    btn.disabled=false;btn.textContent='📩 Enviar para análise';
+  }
+}
+
+addItem();
+
+function __abrirUpgrade() {
+  // Por enquanto abre modal informativo; futuramente integrará Stripe/PagSeguro
+  alert('Em breve! O plano PRO do ImportaCerto estará disponível.\nEntre em contato: contato@importacerto.com.br');
+}
+</script>
+</body>
+</html'<label>NCM</label>'
+        +'<input type="text" id="i_ncm-'+id+'" placeholder="Ex: 85322590" maxlength="10" value="'+(cf.ncm||'')+'" oninput="onNcmInput('+id+',this.value)">'        +'<div class="ncm-status" id="ncm-status-'+id+'"></div>'        +'<button class="ncm-fill-btn" id="ncm-fill-btn-'+id+'" onclick="preencherAliquotas('+id+')">✔ Preencher alíquotas automático</button>'        +'</div>'
+      +'<div><label>Valor FOB (USD)</label><input type="number" id="i_fob-'+id+'" step="0.01" placeholder="0.00" value="'+(cf.fob||'')+'"></div>'
+    +'</div>'
+    +'<div class="g5">'
+      +'<div><label>II (%)</label><input type="number" id="i_ii-'+id+'" step="0.01" placeholder="0.00" value="'+(cf.ii||'')+'"></div>'
+      +'<div><label>IPI (%)</label><input type="number" id="i_ipi-'+id+'" step="0.01" placeholder="0.00" value="'+(cf.ipi||'')+'"></div>'
+      +'<div><label>PIS (%)</label><input type="number" id="i_pis-'+id+'" step="0.01" placeholder="0.00" value="'+(cf.pis||'')+'"></div>'
+      +'<div><label>COFINS (%)</label><input type="number" id="i_cof-'+id+'" step="0.01" placeholder="0.00" value="'+(cf.cof||'')+'"></div>'
+      +'<div><label>ICMS (%)</label><input type="number" id="i_icms-'+id+'" step="0.01" value="'+(cf.icms||'20')+'"></div>'
+    +'</div>'
+    +'<div class="g3">'
+      +'<div><label>Tipo ICMS</label>'
+        +'<select id="i_icmstp-'+id+'" onchange="toggleReducao('+id+')">'
+          +'<option value="normal"'+((!cf.icmstp||cf.icmstp==='normal')?' selected':'')+'">Normal (base cheia)</option>'
+          +'<option value="reducao"'+(cf.icmstp==='reducao'?' selected':'')+'">Redu&#231;&#227;o de Base &#8211; Conv. 52/91</option>'
+        +'</select>'
+      +'</div>'
+      +'<d+'<div id="i_red_wrap-'+id+'" style="'+(cf.icmstp==='reducao'?'':'display:none')+'">'
+        +'<label>% Redu&#231;&#227;o <span style="font-size:10px;color:#aab3bd">(Ex: 8.80 ou 5.60)</span></label>'
+        +'<input type="number" id="i_red-'+id+'" step="0.01" placeholder="Ex: 8.80" value="'+(cf.red||'')+'" oninput="atualizarDivisor('+id+')">'
+        +'<small style="color:#3a9bd5;font-size:10px;display:block;margin-top:2px">Divisor: <strong id="i_div-'+id+'">&#8212;</strong></small>'
+      +'</div>'
+      +'<div><label>Quantidade de pe&#231;as</label><input type="number" id="i_qtd-'+id+'" step="1" min="1" placeholder="Ex: 1500" value="'+(cf.qtd||'')+'"></div>'
+    +'</div>';
+    +'<div id="i_icms_alerta-'+id+'" class="icms-alerta" style="margin-top:8px">'+'⚠️ A aplicação de benefícios fiscais estaduais depende da análise da mercadoria, NCM, estado de destino e legislação vigente. Recomenda-se validação prévia com especialista.'+'</div>'
+  document.getElementById('items-wrap').appendChild(d);
+  toggleReducao(id);
+}
+function remItem(id){items=items.filter(function(x){return x!==id;});var el=document.getElementById('itm-'+id);if(el)el.remove();}
+function duplicarItem(id){
+  addItem({inv:gs('i_inv-'+id),desc:gs('i_desc-'+id),ncm:gs('i_ncm-'+id),
+    fob:gs('i_fob-'+id),ii:gs('i_ii-'+id),ipi:gs('i_ipi-'+id),
+    pis:gs('i_pis-'+id),cof:gs('i_cof-'+id),icms:gs('i_icms-'+id),
+    qtd:gs('i_qtd-'+id),red:gs('i_red-'+id),
+    icmstp:document.getElementById('i_icmstp-'+id)?document.getElementById('i_icmstp-'+id).value:'normal'});
+}
+function addExtra(nom,val){
+  extraCount++;var eid=extraCount;extraIds.push(eid);
+  var d=document.createElement('div');d.className='desp-extra-row';d.id='ext-'+eid;
+  d.innerHTML='<input type="text" id="ex_nom-'+eid+'" placeholder="Ex: Assessoria Aduaneira" value="'+(nom||'')+'">'
+    +'<input type="number" id="ex_val-'+eid+'" step="0.01" placeholder="0.00" style="max-width:140px" value="'+(val||val===0?val:'')+'">'
+    +'<button class="rm-extra" onclick="remExtra('+eid+')">&#215;</button>';
+  document.getElementById('extras-wrap').appendChild(d);
+}
+function remExtra(eid){extraIds=extraIds.filter(function(x){return x!==eid;});var el=document.getElementById('ext-'+eid);if(el)el.remove();}
+
+async function calcular(){
+  if(!items.length){alert('Adicione pelo menos um item.');return;}
+
+  // ── Verificar limite de estudos ──
+  try {
+    await window.__verificarLimiteEstudos();
+  } catch(e) {
+    if(e.message && e.message.startsWith('LIMITE_ATINGIDO')) {
+      const [,plano,usados,limite] = e.message.split(':');
+      const msg = document.getElementById('limite-msg');
+      if(msg) msg.textContent = `Limite do plano ${plano.toUpperCase()} atingido: ${usados}/${limite} estudos este mês.`;
+      document.getElementById('limite-banner').style.display = 'block';
+      window.scrollTo({top:0,behavior:'smooth'});
+      return;
+    }
+    // Se não houver doc de usuário (conta antiga), deixa passar
+  }
+  var cambio=gv('f_cambio'),freteUSD=gv('f_frete');
+  if(!cambio||!freteUSD){alert('Preencha taxa cambial e frete total.');return;}
+  var adicoes=parseInt(document.getElementById('f_adicoes').value)||1;
+  var sisTotal=getSiscomex(adicoes);
+  var totalFOB_USD=0;
+  items.forEach(function(id){totalFOB_USD+=gv('i_fob-'+id);});
+  var freteBRL=freteUSD*cambio;
+  var qtdTotal=gv('f_qtd')||1;
+  var hoje=new Date().toLocaleDateString('pt-BR');
+  var modal=document.getElementById('f_modal')?document.getElementById('f_modal').value:'maritimo';
+  var afrmmTotal=modal==='aereo'?0:(freteUSD*cambio*0.08+20);
+  var totalCIF_all=(totalFOB_USD+freteUSD)*cambio;
+
+  var itemData=items.map(function(id){
+    var fobUSD=gv('i_fob-'+id);
+    var fpUSD=totalFOB_USD>0?(fobUSD/totalFOB_USD)*freteUSD:0;
+    var fpBRL=fpUSD*cambio;
+    var cifUSD=fobUSD+fpUSD;
+    var cifBRL=cifUSD*cambio;
+    var fobBRL=fobUSD*cambio;
+    var afrmmItem=totalCIF_all>0?(cifBRL/totalCIF_all)*afrmmTotal:afrmmTotal;
+    var sisItem=totalCIF_all>0?(cifBRL/totalCIF_all)*sisTotal:sisTotal;
+    var iiA=gv('i_ii-'+id)/100,ipiA=gv('i_ipi-'+id)/100;
+    var pisA=gv('i_pis-'+id)/100,cofA=gv('i_cof-'+id)/100;
+    var icmsA=gv('i_icms-'+id)/100;
+    var icmsTP=document.getElementById('i_icmstp-'+id)?document.getElementById('i_icmstp-'+id).value:'normal';
+    var qtdItem=gv('i_qtd-'+id)||0;
+    var ii=cifBRL*iiA,ipi=(cifBRL+ii)*ipiA,pis=cifBRL*pisA,cofins=cifBRL*cofA;
+    var redPct=gv('i_red-'+id);
+    var icms=0;
+    if(icmsTP==='reducao'&&redPct>0){
+      var divisor=(100-redPct)/100;
+      icms=((cifBRL+ii+ipi+pis+cofins+afrmmItem+sisItem)/divisor)*icmsA;
+    }else{
+      icms=((cifBRL+ii+ipi+pis+cofins+afrmmItem+sisItem)/(1-icmsA))*icmsA;
+    }
+    var totalImp=ii+ipi+pis+cofins+sisItem+icms+afrmmItem;
+    return{id:id,desc:gs('i_desc-'+id)||'—',ncm:gs('i_ncm-'+id)||'—',inv:gs('i_inv-'+id)||'—',
+      fobUSD:fobUSD,fpUSD:fpUSD,cifUSD:cifUSD,fobBRL:fobBRL,fpBRL:fpBRL,cifBRL:cifBRL,
+      iiA:iiA,ipiA:ipiA,pisA:pisA,cofA:cofA,icmsA:icmsA,icmsTP:icmsTP,redPct:redPct,qtdItem:qtdItem,
+      ii:ii,ipi:ipi,pis:pis,cofins:cofins,icms:icms,afrmmItem:afrmmItem,sisItem:sisItem,totalImp:totalImp};
+  });
+
+  var totalFOB_BRL=0,totalCIF_BRL=0,totalImpAll=0;
+  itemData.forEach(function(x){totalFOB_BRL+=x.fobBRL;totalCIF_BRL+=x.cifBRL;totalImpAll+=x.totalImp;});
+
+  var d_frete=freteBRL,d_taxas=gv('d_taxas'),d_port=gv('d_port');
+  var d_rod=gv('d_rod'),d_hon=gv('d_hon'),d_out=gv('d_out');
+  var totalExtras=0,extrasData=[];
+  extraIds.forEach(function(eid){
+    var nom=gs('ex_nom-'+eid)||'Despesa extra';
+    var val=gv('ex_val-'+eid);
+    totalExtras+=val;extrasData.push({nom:nom,val:val});
+  });
+  var totalDesp=d_frete+d_taxas+d_port+d_rod+d_hon+d_out+totalExtras;
+  var grandTotal=totalImpAll+totalDesp;
+  var unitarioGeral=grandTotal/(qtdTotal||1);
+  document.getElementById('d_frete').value=freteBRL.toFixed(2);
+
+  var despList=[
+    {nom:'Frete Internacional',val:d_frete},
+    {nom:'Taxas locais de frete',val:d_taxas},
+    {nom:'Servi&#231;o portu&#225;rio',val:d_port},
+    {nom:'Transporte rodovi&#225;rio',val:d_rod},
+    {nom:'Honor&#225;rios / Serv. Aduaneiro',val:d_hon},
+    {nom:'Outras despesas',val:d_out}
+  ];
+  extrasData.forEach(function(e){despList.push({nom:e.nom,val:e.val});});
+
+  // IDENT
+  document.getElementById('res-ident').innerHTML=
+    '<tr><td class="lk">IMPORTADOR:</td><td>'+gs('f_imp')+'</td><td class="sep"></td><td class="key">TAXA C&Acirc;MBIO</td><td class="val">R$ '+cambio.toFixed(4)+'</td></tr>'
+    +'<tr><td class="lk">EXPORTADOR:</td><td>'+gs('f_exp')+'</td><td class="sep"></td><td class="key">QUANTIDADE TOTAL</td><td class="val">'+qtdTotal+'</td></tr>'
+    +'<tr><td class="lk">PRODUTO:</td><td>'+gs('f_prod')+'</td><td class="sep"></td><td class="key">VMLE (R$)</td><td class="val" style="font-weight:700">'+fR(totalFOB_BRL)+'</td></tr>'
+    +'<tr><td class="lk">PORTO ORIGEM:</td><td>'+gs('f_porig')+'</td><td class="sep"></td><td class="key">TOTAL FOB (USD)</td><td class="val">'+fU(totalFOB_USD)+'</td></tr>'
+    +'<tr><td class="lk">PORTO DESTINO:</td><td>'+gs('f_pdest')+'</td><td class="sep"></td><td class="key">FRETE (USD)</td><td class="val">'+fU(freteUSD)+'</td></tr>'
+    +'<tr><td class="lk">INVOICE(S):</td><td>'+gs('f_inv')+'</td><td class="sep"></td><td class="key">VALOR ADUANEIRO (R$)</td><td class="val" style="font-weight:700">'+fR(totalCIF_BRL)+'</td></tr>'
+    +'<tr><td class="lk">SISCOMEX:</td><td>'+adicoes+' adi&#231;&#245;es</td><td class="sep"></td><td class="key">TAXA SISCOMEX (R$)</td><td class="val" style="font-weight:700">'+fR(sisTotal)+'</td></tr>'
+    +'<tr><td class="lk">MODAL:</td><td>'+(modal==='aereo'?'A&#233;reo':'Mar&#237;timo')+'</td><td class="sep"></td><td class="key">AFRMM (R$)</td><td class="val" style="font-weight:700">'+(modal==='aereo'?'N&#227;o aplic&#225;vel':fR(afrmmTotal))+'</td></tr>';
+
+  // RATEIO
+  var rt='<thead><tr>'
+    +'<th class="L">Invoice</th><th class="L">Descri&ccedil;&atilde;o</th><th class="L">NCM</th>'
+    +'<th>FOB (USD)</th><th>FOB (R$)</th><th>Frete Rat. (USD)</th><th>Frete Rat. (R$)</th><th>Valor Aduaneiro (R$)</th>'
+    +'</tr></thead><tbody>';
+  itemData.forEach(function(x){
+    rt+='<tr><td class="L">'+x.inv+'</td><td class="L">'+x.desc+'</td><td class="L">'+x.ncm+'</td>'
+      +'<td>'+fU(x.fobUSD)+'</td><td>'+fR(x.fobBRL)+'</td><td>'+fU(x.fpUSD)+'</td><td>'+fR(x.fpBRL)+'</td>'
+      +'<td style="font-weight:700">'+fR(x.cifBRL)+'</td></tr>';
+  });
+  rt+='<tr class="ttr"><td class="L" colspan="3">TOTAL</td>'
+    +'<td>'+fU(totalFOB_USD)+'</td><td>'+fR(totalFOB_BRL)+'</td>'
+    +'<td>'+fU(freteUSD)+'</td><td>'+fR(freteBRL)+'</td><td>'+fR(totalCIF_BRL)+'</td>'
+    +'</tr></tbody>';
+  document.getElementById('rtable').innerHTML=rt;
+
+  // IMPOSTOS POR ITEM
+  var impHtml='';
+  itemData.forEach(function(x){
+    var icmsLabel='ICMS';
+    if(x.icmsTP==='reducao'&&x.redPct>0){
+      var divLabel=((100-x.redPct)/100).toFixed(4);
+      icmsLabel='ICMS (Redu&ccedil;&atilde;o '+x.redPct.toFixed(2).replace('.',',')+
+        '% &ndash; divisor '+divLabel+')';
+    }
+    impHtml+='<div class="tax-block">'
+      +'<div class="tax-title">NCM: '+x.ncm+' &mdash; '+x.desc+' &nbsp;|&nbsp; Valor Aduaneiro: '+fR(x.cifBRL)+'</div>'
+      +'<div class="tax-body">'
+        +'<div class="trow"><span class="lbl">Imposto de Importa&ccedil;&atilde;o<span class="aliq">'+fp(x.iiA)+'</span></span><span class="val">'+fR(x.ii)+'</span></div>'
+        +'<div class="trow"><span class="lbl">I.P.I.<span class="aliq">'+fp(x.ipiA)+'</span></span><span class="val">'+fR(x.ipi)+'</span></div>'
+        +'<div class="trow"><span class="lbl">PIS<span class="aliq">'+fp(x.pisA)+'</span></span><span class="val">'+fR(x.pis)+'</span></div>'
+        +'<div class="trow"><span class="lbl">COFINS<span class="aliq">'+fp(x.cofA)+'</span></span><span class="val">'+fR(x.cofins)+'</span></div>'
+        +'<div class="trow"><span class="lbl">Taxa Siscomex (rateado pelo CIF)<span class="aliq">proporcional</span></span><span class="val">'+fR(x.sisItem)+'</span></div>'
+        +'<div class="trow"><span class="lbl">AFRMM<span class="aliq">'+(modal==='aereo'?'N&atilde;o aplic&aacute;vel (modal a&eacute;reo)':'Frete&times;C&acirc;mbio&times;8%+R$20 rateado')+'</span></span><span class="val">'+fR(x.afrmmItem)+'</span></div>'
+        +'<div class="trow"><span class="lbl">'+icmsLabel+'<span class="aliq">'+fp(x.icmsA)+'</span></span><span class="val">'+fR(x.icms)+'</span></div>'
+        +'<div class="tsub"><span>Subtotal impostos &#8212; '+x.inv+' / NCM '+x.ncm+'</span><span>'+fR(x.totalImp)+'</span></div>'
+      +'</div></div>';
+  });
+  document.getElementById('imp-wrap').innerHTML=impHtml;
+
+  // BLOCO CONSOLIDADO PARA IMPRESSAO (soma de todos os itens em um unico bloco)
+  (function(){
+    var totII=0,totIPI=0,totPIS=0,totCOF=0,totSIS=0,totAFR=0,totICMS=0,totIMP=0;
+    var totCIF=0;
+    itemData.forEach(function(x){
+      totII+=x.ii;totIPI+=x.ipi;totPIS+=x.pis;totCOF+=x.cofins;
+      totSIS+=x.sisItem;totAFR+=x.afrmmItem;totICMS+=x.icms;totIMP+=x.totalImp;
+      totCIF+=x.cifBRL;
+    });
+    var printHtml='<div class="tax-block">'      +'<div class="tax-title">Valor Aduaneiro Total: '+fR(totCIF)+'</div>'      +'<div class="tax-body">'        +'<div class="trow"><span class="lbl">Imposto de Importa&ccedil;&atilde;o</span><span class="val">'+fR(totII)+'</span></div>'        +'<div class="trow"><span class="lbl">I.P.I.</span><span class="val">'+fR(totIPI)+'</span></div>'        +'<div class="trow"><span class="lbl">PIS</span><span class="val">'+fR(totPIS)+'</span></div>'        +'<div class="trow"><span class="lbl">COFINS</span><span class="val">'+fR(totCOF)+'</span></div>'        +'<div class="trow"><span class="lbl">Taxa Siscomex</span><span class="val">'+fR(totSIS)+'</span></div>'        +'<div class="trow"><span class="lbl">AFRMM<span class="aliq">'+(modal==='aereo'?'N&atilde;o aplic&aacute;vel (modal a&eacute;reo)':'Frete&times;C&acirc;mbio&times;8%+R$20 rateado')+'</span></span><span class="val">'+fR(totAFR)+'</span></div>'        +'<div class="trow"><span class="lbl">ICMS</span><span class="val">'+fR(totICMS)+'</span></div>'        +'<div class="tsub"><span>Subtotal impostos</span><span>'+fR(totIMP)+'</span></div>'      +'</div></div>';
+    document.getElementById('imp-wrap-print').innerHTML=printHtml;
+  })();
+
+  // IMPOSTO TOTAL POR NCM (ordem de inserção; só exibe quando há >1 NCM distinto)
+  var ncmOrder=[],ncmMap={};
+  itemData.forEach(function(x){
+    if(!ncmMap[x.ncm]){ncmOrder.push(x.ncm);ncmMap[x.ncm]={ncm:x.ncm,desc:x.desc,total:0,ii:0,ipi:0,pis:0,cofins:0,icms:0,afrmm:0,sis:0};}
+    ncmMap[x.ncm].total+=x.totalImp;ncmMap[x.ncm].ii+=x.ii;ncmMap[x.ncm].ipi+=x.ipi;
+    ncmMap[x.ncm].pis+=x.pis;ncmMap[x.ncm].cofins+=x.cofins;
+    ncmMap[x.ncm].icms+=x.icms;ncmMap[x.ncm].afrmm+=x.afrmmItem;ncmMap[x.ncm].sis+=x.sisItem;
+  });
+  var secNcm=document.getElementById('sec-ncm-total');
+  var ncmHtml='';
+  if(ncmOrder.length>1){
+    ncmOrder.forEach(function(ncm){
+      var n2=ncmMap[ncm];
+      ncmHtml+='<div class="ncm-total-block">'
+        +'<div class="ncm-total-title">IMPOSTO TOTAL NCM: '+n2.ncm+' &mdash; '+n2.desc+'</div>'
+        +'<div class="ncm-total-body">'
+          +'<div class="trow"><span class="lbl">Imposto de Importa&ccedil;&atilde;o</span><span class="val">'+fR(n2.ii)+'</span></div>'
+          +'<div class="trow"><span class="lbl">I.P.I.</span><span class="val">'+fR(n2.ipi)+'</span></div>'
+          +'<div class="trow"><span class="lbl">PIS</span><span class="val">'+fR(n2.pis)+'</span></div>'
+          +'<div class="trow"><span class="lbl">COFINS</span><span class="val">'+fR(n2.cofins)+'</span></div>'
+          +'<div class="trow"><span class="lbl">Taxa Siscomex</span><span class="val">'+fR(n2.sis)+'</span></div>'
+          +'<div class="trow"><span class="lbl">AFRMM</span><span class="val">'+fR(n2.afrmm)+'</span></div>'
+          +'<div class="trow"><span class="lbl">ICMS</span><span class="val">'+fR(n2.icms)+'</span></div>'
+          +'<div class="ncm-total-sub"><span>IMPOSTO TOTAL NCM '+n2.ncm+'</span><span>'+fR(n2.total)+'</span></div>'
+        +'</div></div>';
+    });
+    if(secNcm)secNcm.style.display='';
+  }else{
+    if(secNcm)secNcm.style.display='none';
+  }
+  document.getElementById('ncm-total-wrap').innerHTML=ncmHtml;
+
+  // DESPESAS
+  document.getElementById('desp-body').innerHTML=
+    despList.map(function(r){return '<div class="trow"><span class="lbl">'+r.nom+'</span><span class="val">'+fR(r.val)+'</span></div>';}).join('')
+    +'<div class="dsub"><span>2.1 &#8211; SUBTOTAL DESPESAS GERAIS</span><span>'+fR(totalDesp)+'</span></div>';
+
+  // TABELA RATEIO COMPLETO
+  var despCols=despList.filter(function(d){return d.val>0;});
+  var rdHtml='<thead><tr>'
+    +'<th class="L">N&#186;</th><th class="L">NCM</th><th class="L">Descri&ccedil;&atilde;o</th>'
+    +'<th>Qtd</th><th>% Rateio</th><th>VMLE (USD)</th><th>VMLE (R$)</th><th>Frete Rat. (R$)</th><th>CIF (R$)</th>'
+    +'<th>II (R$)</th><th>IPI (R$)</th><th>PIS (R$)</th><th>COFINS (R$)</th>'
+    +'<th>Siscomex</th><th>AFRMM</th>';
+  despCols.forEach(function(d){rdHtml+='<th>'+d.nom+'</th>';});
+  rdHtml+='<th>Imp. Fed+Est (R$)</th><th>Desp. Gerais (R$)</th><th>Custo Total (R$)</th><th>Custo Unit. (R$)</th></tr></thead><tbody>';
+  var totRD={vmle:0,fp:0,cif:0,ii:0,ipi:0,pis:0,cofins:0,sis:0,afrmm:0,imp:0,desp:0,total:0};
+  var despColTotals=despCols.map(function(){return 0;});
+  itemData.forEach(function(x,idx){
+    var pct=totalFOB_USD>0?(x.fobUSD/totalFOB_USD*100):0;
+    var despItem=0;
+    var despItemVals=despCols.map(function(d){
+      var v=totalCIF_BRL>0?(x.cifBRL/totalCIF_BRL)*d.val:0;despItem+=v;return v;
+    });
+    var custoTotal=x.totalImp+despItem;
+    var custoUnit=x.qtdItem>0?custoTotal/x.qtdItem:0;
+    totRD.vmle+=x.fobBRL;totRD.fp+=x.fpBRL;totRD.cif+=x.cifBRL;
+    totRD.ii+=x.ii;totRD.ipi+=x.ipi;totRD.pis+=x.pis;totRD.cofins+=x.cofins;
+    totRD.sis+=x.sisItem;totRD.afrmm+=x.afrmmItem;totRD.imp+=x.totalImp;
+    totRD.desp+=despItem;totRD.total+=custoTotal;
+    despItemVals.forEach(function(v,i){despColTotals[i]+=v;});
+    rdHtml+='<tr>'
+      +'<td class="L">'+(idx+1)+'</td><td class="L">'+x.ncm+'</td><td class="L">'+x.desc+'</td>'
+      +'<td>'+(x.qtdItem>0?x.qtdItem.toLocaleString('pt-BR'):'-')+'</td>'
+      +'<td>'+fPct(pct)+'</td>'
+      +'<td>'+fU(x.fobUSD)+'</td>'
+      +'<td>'+fR(x.fobBRL)+'</td><td>'+fR(x.fpBRL)+'</td><td>'+fR(x.cifBRL)+'</td>'
+      +'<td>'+fR(x.ii)+'</td><td>'+fR(x.ipi)+'</td><td>'+fR(x.pis)+'</td><td>'+fR(x.cofins)+'</td>'
+      +'<td>'+fR(x.sisItem)+'</td><td>'+fR(x.afrmmItem)+'</td>';
+    despItemVals.forEach(function(v){rdHtml+='<td>'+fR(v)+'</td>';});
+    rdHtml+='<td style="font-weight:600">'+fR(x.totalImp)+'</td>'
+      +'<td>'+fR(despItem)+'</td>'
+      +'<td style="font-weight:700">'+fR(custoTotal)+'</td>'
+      +'<td style="font-weight:700;color:#0d2d5e">'+(x.qtdItem>0?fR(custoUnit):'-')+'</td>'
+      +'</tr>';
+  });
+  rdHtml+='<tr class="ttr"><td class="L" colspan="3">TOTAIS</td>'
+    +'<td>-</td><td>100,00%</td>'
+    +'<td>'+fU(totalFOB_USD)+'</td>'
+    +'<td>'+fR(totRD.vmle)+'</td><td>'+fR(totRD.fp)+'</td><td>'+fR(totRD.cif)+'</td>'
+    +'<td>'+fR(totRD.ii)+'</td><td>'+fR(totRD.ipi)+'</td><td>'+fR(totRD.pis)+'</td><td>'+fR(totRD.cofins)+'</td>'
+    +'<td>'+fR(totRD.sis)+'</td><td>'+fR(totRD.afrmm)+'</td>';
+  despColTotals.forEach(function(v){rdHtml+='<td>'+fR(v)+'</td>';});
+  rdHtml+='<td>'+fR(totRD.imp)+'</td><td>'+fR(totRD.desp)+'</td><td>'+fR(totRD.total)+'</td><td>-</td></tr></tbody>';
+  document.getElementById('rdtable').innerHTML=rdHtml;
+
+  // RESUMO
+  document.getElementById('resumo-rows').innerHTML=
+    '<div class="resumo-row"><span>Valor do Produto (VMLE) <span style="font-size:10px;color:#aab3bd">&#8212; pago diretamente ao fornecedor</span></span><span style="color:#aab3bd">'+fR(totalFOB_BRL)+'</span></div>'
+    +'<div class="resumo-row"><span>Total Impostos Federais + Estaduais</span><span style="font-weight:700">'+fR(totalImpAll)+'</span></div>'
+    +'<div class="resumo-row"><span>Subtotal Despesas Gerais</span><span style="font-weight:700">'+fR(totalDesp)+'</span></div>';
+
+  document.getElementById('grand-total').innerHTML=
+    '<div class="gt-lbl">TOTAL DE IMPOSTOS (FEDERAIS + ESTADUAIS) + DESPESAS</div>'
+    +'<div class="gt-val">'+fR(grandTotal)+'</div>'
+    +'<div class="gt-sub">DATA: '+hoje+' &nbsp;&middot;&nbsp; C&acirc;mbio: R$ '+cambio.toFixed(4)+' &nbsp;&middot;&nbsp; Siscomex ('+adicoes+' adi&ccedil;&otilde;es): '+fR(sisTotal)+' &nbsp;&middot;&nbsp; AFRMM: '+fR(afrmmTotal)+'</div>';
+
+  // CUSTO UNITÁRIO POR NCM + GERAL
+  // Custo por NCM: só exibe se o NCM tiver qtdItem preenchida
+  var ucHtml='';
+  var algumCustoNCM=false;
+  if(ncmOrder.length>1){
+    ncmOrder.forEach(function(ncm){
+      var itensNCM=itemData.filter(function(x){return x.ncm===ncm;});
+      var qtdNCM=0,impNCM=0,despNCM=0;
+      itensNCM.forEach(function(x){
+        qtdNCM+=x.qtdItem;impNCM+=x.totalImp;
+        despCols.forEach(function(d){despNCM+=totalCIF_BRL>0?(x.cifBRL/totalCIF_BRL)*d.val:0;});
+      });
+      var custoNCM=impNCM+despNCM;
+      if(qtdNCM>0){
+        algumCustoNCM=true;
+        ucHtml+='<div class="unit-card" style="margin-bottom:8px">'
+          +'<div><div class="uc-lbl">Custo unit&#225;rio &#8212; NCM '+ncm+' ('+ncmMap[ncm].desc+')</div>'
+          +'<div class="uc-qty">Impostos + despesas rateadas &divide; '+qtdNCM.toLocaleString('pt-BR')+' pe&ccedil;as</div></div>'
+          +'<div class="uc-val">'+fR(custoNCM/qtdNCM)+'</div>'
+          +'</div>';
+      }
+    });
+  }
+  // Card geral: só exibe quando NÃO há custo por NCM (1 só NCM) OU quando qtdTotal foi preenchido
+  var qtdSomada=itemData.reduce(function(s,x){return s+(x.qtdItem||0);},0);
+  var qtdParaGeral=qtdSomada>0?qtdSomada:(qtdTotal||1);
+  if(!algumCustoNCM){
+    ucHtml+='<div class="unit-card">'
+      +'<div><div class="uc-lbl">Custo unit&#225;rio de importa&ccedil;&atilde;o</div>'
+      +'<div class="uc-qty">Total (impostos + despesas) &divide; '+qtdParaGeral.toLocaleString('pt-BR')+' unidade(s)</div></div>'
+      +'<div class="uc-val">'+fR(grandTotal/qtdParaGeral)+'</div>'
+      +'</div>';
+  }
+  document.getElementById('unit-cards-wrap').innerHTML=ucHtml;
+
+  var obs=gs('f_obs');var obEl=document.getElementById('obs-box');
+  if(obs){obEl.innerHTML='<strong>OBSERVA&Ccedil;&Otilde;ES</strong>'+obs.replace(/\n/g,'<br>');obEl.style.display='block';}
+  else{obEl.style.display='none';}
+
+  lastCalc={itemData:itemData,ncmOrder:ncmOrder,ncmMap:ncmMap,despList:despList,despCols:despCols,
+    totalDesp:totalDesp,grandTotal:grandTotal,unitarioGeral:unitarioGeral,
+    totalImpAll:totalImpAll,totalFOB_BRL:totalFOB_BRL,totalCIF_BRL:totalCIF_BRL,
+    totalFOB_USD:totalFOB_USD,freteUSD:freteUSD,freteBRL:freteBRL,
+    cambio:cambio,sisTotal:sisTotal,adicoes:adicoes,afrmmTotal:afrmmTotal,modal:modal,
+    qtdTotal:qtdTotal,hoje:hoje,
+    imp:gs('f_imp'),exp:gs('f_exp'),prod:gs('f_prod'),inv:gs('f_inv'),
+    porig:gs('f_porig'),pdest:gs('f_pdest')};
+
+  document.getElementById('resultado').classList.add('show');
+  document.getElementById('resultado').scrollIntoView({behavior:'smooth',block:'start'});
+  // Mostrar área de avisos pós-resultado e aviso estimativo
+  document.getElementById('area-pos-resultado').style.display='block';
+  var avisoEl=document.getElementById('aviso-estimativo');
+  if(avisoEl)avisoEl.style.display='block';
+  // ── Incrementar contador de estudos ──
+  window.__incrementarEstudo && window.__incrementarEstudo().catch(()=>{});
+}
+
+function limpar(){
+  document.getElementById('resultado').classList.remove('show');
+  document.getElementById('area-pos-resultado').style.display='none';
+  var avisoEl=document.getElementById('aviso-estimativo');
+  if(avisoEl)avisoEl.style.display='none';
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function abrirModal(){
+  if(!document.getElementById('resultado').classList.contains('show')){alert('Calcule o estudo primeiro.');return;}
+  const plano = window.__planoAtual || 'free';
+  if(plano === 'free'){
+    // Mostrar banner de upgrade em vez do modal
+    const msg = document.getElementById('limite-msg');
+    if(msg) msg.textContent = 'Exportação PDF e Excel disponível nos planos Pro e Premium.';
+    document.getElementById('limite-banner').style.display = 'block';
+    window.scrollTo({top:0,behavior:'smooth'});
+    return;
+  }
+  document.getElementById('modal').classList.add('show');
+}
+function fecharModal(){document.getElementById('modal').classList.remove('show');}
+
+function confirmarPDF(){
+  fecharModal();
+  // Preparar: ocultar seções que não vão no PDF, mostrar header/footer de impressão
+  document.getElementById('sec-rateio-desp').style.display='none';
+  document.getElementById('sec-resumo').style.display='none';
+  document.getElementById('pdf-header').style.display='block';
+  document.getElementById('pdf-footer').style.display='block';
+  // Ocultar área de avisos e mostrar rodapé comercial no PDF
+  var areaPosEl=document.getElementById('area-pos-resultado');
+  if(areaPosEl)areaPosEl.style.display='none';
+  var rodapeComEl=document.getElementById('pdf-rodape-comercial');
+  if(rodapeComEl)rodapeComEl.style.display='block';
+  // Clonar grand-total, unit-cards e obs-box para aparecerem no PDF
+  var pdfArea=document.getElementById('pdf-area');
+  var pdfFooterEl=document.getElementById('pdf-footer');
+  var gtClone=document.getElementById('grand-total').cloneNode(true);
+  var ucClone=document.getElementById('unit-cards-wrap').cloneNode(true);
+  var obClone=document.getElementById('obs-box').cloneNode(true);
+  gtClone.id='gt-print-clone';ucClone.id='uc-print-clone';obClone.id='ob-print-clone';
+  pdfArea.insertBefore(obClone,pdfFooterEl);
+  pdfArea.insertBefore(ucClone,pdfFooterEl);
+  pdfArea.insertBefore(gtClone,pdfFooterEl);
+  // Disparar impressão e restaurar depois
+  setTimeout(function(){
+    window.print();
+    setTimeout(function(){
+      pdfArea.removeChild(gtClone);
+      pdfArea.removeChild(ucClone);
+      pdfArea.removeChild(obClone);
+      document.getElementById('pdf-header').style.display='none';
+      document.getElementById('pdf-footer').style.display='none';
+      document.getElementById('sec-rateio-desp').style.display='';
+      document.getElementById('sec-resumo').style.display='';
+      var areaPosEl2=document.getElementById('area-pos-resultado');
+      if(areaPosEl2)areaPosEl2.style.display='block';
+      var rodapeComEl2=document.getElementById('pdf-rodape-comercial');
+      if(rodapeComEl2)rodapeComEl2.style.display='none';
+    },500);
+  },200);
+}
+
+function confirmarXLSX(){
+  if(!lastCalc){alert('Calcule o estudo primeiro.');return;}
+  document.getElementById('loading').textContent='Gerando Excel, aguarde...';
+  document.getElementById('loading').classList.add('show');
+  try{
+    var c=lastCalc;
+    var wb=XLSX.utils.book_new();
+    var rows=[];
+    rows.push(['IMPORTACERTO - ESTUDO DE VIABILIDADE DE IMPORTACAO']);
+    rows.push([]);
+    rows.push(['Data:',c.hoje,'','Cambio (R$/USD):',c.cambio]);
+    rows.push(['Importador:',c.imp,'','Exportador:',c.exp]);
+    rows.push(['Produto:',c.prod,'','Invoice(s):',c.inv]);
+    rows.push(['Porto Origem:',c.porig,'','Porto Destino:',c.pdest]);
+    rows.push(['FOB Total (USD):',c.totalFOB_USD,'','FOB Total (R$):',c.totalFOB_BRL]);
+    rows.push(['Frete (USD):',c.freteUSD,'','Frete (R$):',c.freteBRL]);
+    rows.push(['Valor Aduaneiro (R$):',c.totalCIF_BRL,'','Siscomex ('+c.adicoes+' adicoes):',c.sisTotal]);
+    rows.push(['AFRMM (R$):',c.afrmmTotal,'','Modal:',(c.modal==='aereo'?'Aereo':'Maritimo')]);
+    rows.push([]);
+    var hdr=['No','NCM','Descricao','Qtd (pcs)','% Rateio (FOB)','VMLE (USD)',
+      'VMLE (R$)','Frete Rat. (R$)','Valor CIF (R$)',
+      'II (R$)','IPI (R$)','PIS (R$)','COFINS (R$)','Siscomex (R$)','AFRMM (R$)'];
+    c.despCols.forEach(function(d){hdr.push(d.nom.replace(/&[^;]+;/g,'')+' (R$)');});
+    hdr.push('Imp. Fed+Est (R$)','Despesas Gerais (R$)','Custo Total (R$)','Custo Unit. (R$)');
+    rows.push(hdr);
+    var totRow={vmleUsd:0,vmle:0,fp:0,cif:0,ii:0,ipi:0,pis:0,cofins:0,sis:0,afrmm:0,imp:0,desp:0,total:0};
+    var despColTotals=c.despCols.map(function(){return 0;});
+    c.itemData.forEach(function(x,idx){
+      var pct=c.totalFOB_USD>0?(x.fobUSD/c.totalFOB_USD*100):0;
+      var despItem=0;
+      var despItemVals=c.despCols.map(function(d){
+        var v=c.totalCIF_BRL>0?(x.cifBRL/c.totalCIF_BRL)*d.val:0;despItem+=v;return v;
+      });
+      var custoTotal=x.totalImp+despItem;
+      var custoUnit=x.qtdItem>0?custoTotal/x.qtdItem:null;
+      var row=[idx+1,x.ncm,x.desc,x.qtdItem||null,pct/100,x.fobUSD,
+        x.fobBRL,x.fpBRL,x.cifBRL,x.ii,x.ipi,x.pis,x.cofins,x.sisItem,x.afrmmItem];
+      despItemVals.forEach(function(v,i){row.push(v);despColTotals[i]+=v;});
+      row.push(x.totalImp,despItem,custoTotal,custoUnit);
+      totRow.vmleUsd+=x.fobUSD;totRow.vmle+=x.fobBRL;totRow.fp+=x.fpBRL;totRow.cif+=x.cifBRL;
+      totRow.ii+=x.ii;totRow.ipi+=x.ipi;totRow.pis+=x.pis;totRow.cofins+=x.cofins;
+      totRow.sis+=x.sisItem;totRow.afrmm+=x.afrmmItem;totRow.imp+=x.totalImp;
+      totRow.desp+=despItem;totRow.total+=custoTotal;
+      rows.push(row);
+    });
+    var totLine=['TOTAIS','','',null,1,totRow.vmleUsd,totRow.vmle,totRow.fp,totRow.cif,
+      totRow.ii,totRow.ipi,totRow.pis,totRow.cofins,totRow.sis,totRow.afrmm];
+    despColTotals.forEach(function(v){totLine.push(v);});
+    totLine.push(totRow.imp,totRow.desp,totRow.total,null);
+    rows.push(totLine);rows.push([]);
+    rows.push(['RESUMO']);
+    rows.push(['Valor Produto - VMLE (pago ao fornecedor)',c.totalFOB_BRL]);
+    rows.push(['Total Impostos Federais + Estaduais',c.totalImpAll]);
+    rows.push(['Subtotal Despesas Gerais',c.totalDesp]);
+    rows.push(['TOTAL GLOBAL (Impostos + Despesas)',c.grandTotal]);
+    rows.push(['Custo Unitario Geral (div '+c.qtdTotal+' unidades)',c.unitarioGeral]);
+    var ws=XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols']=[{wch:4},{wch:12},{wch:28},{wch:10},{wch:12},{wch:13},
+      {wch:14},{wch:14},{wch:14},{wch:13},{wch:13},{wch:13},{wch:13},{wch:13},{wch:13}];
+    c.despCols.forEach(function(){ws['!cols'].push({wch:18});});
+    ws['!cols'].push({wch:22},{wch:18},{wch:16},{wch:14});
+    XLSX.utils.book_append_sheet(wb,ws,'Estudo Detalhado');
+    var imp2=(c.imp||'Estudo').replace(/[^a-zA-Z0-9]/g,'_').substring(0,30);
+    var dt2=new Date().toLocaleDateString('pt-BR').replace(/\//g,'-');
+    XLSX.writeFile(wb,'Estudo_Detalhado_'+imp2+'_'+dt2+'.xlsx');
+  }catch(e){alert('Erro XLSX: '+e.message);}
+  document.getElementById('loading').classList.remove('show');
+  fecharModal();
+}
+
+/* =========================================================
+   ESTUDOS SALVOS (persistência na nuvem via Firestore)
+   Captura todo o estado do formulário (não apenas o resultado
+   calculado) para permitir reabrir e editar depois, de qualquer
+   computador, bastando estar logado.
+   ========================================================= */
+var estudoAtualId=null;
+var estudosCache=[]; // cache em memória da última listagem, usado para renderizar a UI
+
+function showToast(msg){
+  var t=document.getElementById('save-toast');
+  t.textContent=msg;t.classList.add('show');
+  clearTimeout(t._tm);
+  t._tm=setTimeout(function(){t.classList.remove('show');},2600);
+}
+
+// Captura o estado atual de TODO o formulário (dados gerais, frete/câmbio,
+// modal de transporte, itens/NCMs, despesas e despesas extras)
+function capturarEstadoForm(){
+  var extras=extraIds.map(function(eid){
+    return{nom:gs('ex_nom-'+eid),val:gs('ex_val-'+eid)};
+  });
+  var itensForm=items.map(function(id){
+    return{
+      inv:gs('i_inv-'+id),desc:gs('i_desc-'+id),ncm:gs('i_ncm-'+id),
+      fob:gs('i_fob-'+id),ii:gs('i_ii-'+id),ipi:gs('i_ipi-'+id),
+      pis:gs('i_pis-'+id),cof:gs('i_cof-'+id),icms:gs('i_icms-'+id),
+      qtd:gs('i_qtd-'+id),red:gs('i_red-'+id),
+      icmstp:document.getElementById('i_icmstp-'+id)?document.getElementById('i_icmstp-'+id).value:'normal'
+    };
+  });
+  return{
+    imp:gs('f_imp'),exp:gs('f_exp'),prod:gs('f_prod'),inv:gs('f_inv'),
+    porig:gs('f_porig'),pdest:gs('f_pdest'),obs:gs('f_obs'),
+    frete:gs('f_frete'),cambio:gs('f_cambio'),qtd:gs('f_qtd'),
+    adicoes:document.getElementById('f_adicoes').value,
+    modal:document.getElementById('f_modal')?document.getElementById('f_modal').value:'maritimo',
+    d_taxas:gs('d_taxas'),d_port:gs('d_port'),d_rod:gs('d_rod'),
+    d_hon:gs('d_hon'),d_out:gs('d_out'),
+    itens:itensForm,extras:extras
+  };
+}
+
+// Restaura o formulário inteiro a partir de um estado salvo
+function restaurarEstadoForm(st){
+  // limpa itens e despesas extras atuais
+  items.slice().forEach(function(id){remItem(id);});
+  extraIds.slice().forEach(function(eid){remExtra(eid);});
+  document.getElementById('items-wrap').innerHTML='';
+  document.getElementById('extras-wrap').innerHTML='';
+  items=[];extraIds=[];
+
+  document.getElementById('f_imp').value=st.imp||'';
+  document.getElementById('f_exp').value=st.exp||'';
+  document.getElementById('f_prod').value=st.prod||'';
+  document.getElementById('f_inv').value=st.inv||'';
+  document.getElementById('f_porig').value=st.porig||'';
+  document.getElementById('f_pdest').value=st.pdest||'';
+  document.getElementById('f_obs').value=st.obs||'';
+  document.getElementById('f_frete').value=st.frete||'';
+  document.getElementById('f_cambio').value=st.cambio||'';
+  document.getElementById('f_qtd').value=st.qtd||'1';
+  if(st.adicoes){document.getElementById('f_adicoes').value=st.adicoes;}
+  atualizarSiscomex();
+  if(document.getElementById('f_modal')){
+    document.getElementById('f_modal').value=st.modal||'maritimo';
+    atualizarModal();
+  }
+  document.getElementById('d_taxas').value=st.d_taxas||'0';
+  document.getElementById('d_port').value=st.d_port||'0';
+  document.getElementById('d_rod').value=st.d_rod||'0';
+  document.getElementById('d_hon').value=st.d_hon||'0';
+  document.getElementById('d_out').value=st.d_out||'0';
+
+  (st.itens||[]).forEach(function(it){addItem(it);});
+  if(!(st.itens||[]).length){addItem();}
+  (st.extras||[]).forEach(function(ex){addExtra(ex.nom,ex.val);});
+
+  document.getElementById('resultado').classList.remove('show');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+async function abrirModalEstudos(){
+  document.getElementById('estudo-nome-novo').value='';
+  var wrap=document.getElementById('estudos-list');
+  wrap.innerHTML='<div class="estudos-empty">Carregando estudos…</div>';
+  document.getElementById('modal-estudos').classList.add('show');
+
+  try{
+    estudosCache=await window.__firestoreListarEstudos();
+  }catch(e){
+    wrap.innerHTML='<div class="estudos-empty">Erro ao carregar estudos: '+escHtml(e.message)+'</div>';
+    return;
+  }
+
+  var updRow=document.getElementById('estudo-update-row');
+  if(estudoAtualId){
+    var atual=estudosCache.find(function(e){return e.id===estudoAtualId;});
+    if(atual){
+      updRow.style.display='flex';
+      updRow.querySelector('button').textContent='\uD83D\uDCBE Atualizar "'+atual.nome+'"';
+    }else{
+      estudoAtualId=null;
+      updRow.style.display='none';
+    }
+  }else{
+    updRow.style.display='none';
+  }
+  renderListaEstudos();
+}
+function fecharModalEstudos(){document.getElementById('modal-estudos').classList.remove('show');}
+
+function escHtml(s){
+  return String(s==null?'':s).replace(/[&<>"']/g,function(c){
+    return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+
+function renderListaEstudos(){
+  var wrap=document.getElementById('estudos-list');
+  if(!estudosCache.length){
+    wrap.innerHTML='<div class="estudos-empty">Nenhum estudo salvo ainda.<br>Preencha o formulário e clique em "Salvar como novo".</div>';
+    return;
+  }
+  // mais recentes primeiro
+  var ordenada=estudosCache.slice().sort(function(a,b){return (b.atualizadoEm||0)-(a.atualizadoEm||0);});
+  var html='';
+  ordenada.forEach(function(e){
+    var dt=e.atualizadoEm?new Date(e.atualizadoEm).toLocaleDateString('pt-BR')+' '+new Date(e.atualizadoEm).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'';
+    var modalLbl=(e.estado&&e.estado.modal==='aereo')?'A&#233;reo':'Mar&#237;timo';
+    html+='<div class="estudo-row">'
+      +'<div class="estudo-info">'
+        +'<div class="estudo-nome">'+escHtml(e.nome||'(sem nome)')+'</div>'
+        +'<div class="estudo-meta">'+modalLbl+' &nbsp;&middot;&nbsp; Atualizado: '+dt+'</div>'
+      +'</div>'
+      +'<div class="estudo-btns">'
+        +'<button class="ebtn ebtn-load" data-estudo-id="'+e.id+'" data-action="load">Abrir</button>'
+        +'<button class="ebtn ebtn-del" data-estudo-id="'+e.id+'" data-action="del">Excluir</button>'
+      +'</div>'
+    +'</div>';
+  });
+  wrap.innerHTML=html;
+}
+
+// Delegação de eventos: evita problemas de escaping ao montar onclick com nomes/ids dinâmicos
+document.addEventListener('click',function(ev){
+  var btn=ev.target.closest&&ev.target.closest('[data-estudo-id]');
+  if(!btn)return;
+  var id=btn.getAttribute('data-estudo-id');
+  var action=btn.getAttribute('data-action');
+  if(action==='load')carregarEstudo(id);
+  else if(action==='del')excluirEstudo(id);
+});
+
+async function salvarEstudoAtual(){
+  var nomeInput=document.getElementById('estudo-nome-novo').value.trim();
+  var estado=capturarEstadoForm();
+  if(!estado.itens.length){alert('Adicione ao menos um item antes de salvar.');return;}
+  var nome=nomeInput||(estado.imp||'Estudo sem nome')+(estado.inv?(' — '+estado.inv):'');
+  var btn=document.getElementById('estudo-nome-novo').nextElementSibling;
+  var textoOriginal=btn?btn.textContent:'';
+  if(btn){btn.disabled=true;btn.textContent='Salvando…';}
+  try{
+    var novoId=await window.__firestoreSalvarEstudo(null,nome,estado,true);
+    estudoAtualId=novoId;
+    showToast('Estudo "'+nome+'" salvo com sucesso.');
+    document.getElementById('estudo-nome-novo').value='';
+    var updRow=document.getElementById('estudo-update-row');
+    updRow.style.display='flex';
+    updRow.querySelector('button').textContent='\uD83D\uDCBE Atualizar "'+nome+'"';
+    estudosCache=await window.__firestoreListarEstudos();
+    renderListaEstudos();
+  }catch(e){
+    alert('Não foi possível salvar o estudo: '+e.message);
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent=textoOriginal;}
+  }
+}
+
+// Salva alterações sobre um estudo já existente (mesmo id), preservando o histórico de criação
+async function atualizarEstudoExistente(id){
+  var estado=capturarEstadoForm();
+  if(!estado.itens.length){alert('Adicione ao menos um item antes de salvar.');return;}
+  var atual=estudosCache.find(function(e){return e.id===id;});
+  var nome=atual?atual.nome:'Estudo';
+  var updRow=document.getElementById('estudo-update-row');
+  var btn=updRow.querySelector('button');
+  var textoOriginal=btn.textContent;
+  btn.disabled=true;btn.textContent='Atualizando…';
+  try{
+    await window.__firestoreSalvarEstudo(id,nome,estado,false);
+    showToast('Estudo "'+nome+'" atualizado com sucesso.');
+  }catch(e){
+    alert('Não foi possível atualizar o estudo: '+e.message);
+  }finally{
+    btn.disabled=false;btn.textContent=textoOriginal;
+  }
+}
+
+async function carregarEstudo(id){
+  var item=estudosCache.find(function(e){return e.id===id;});
+  if(!item){alert('Estudo não encontrado.');return;}
+  if(items.length&&!confirm('Carregar este estudo vai substituir os dados atuais do formulário. Deseja continuar?')){return;}
+  restaurarEstadoForm(item.estado);
+  estudoAtualId=id;
+  fecharModalEstudos();
+  showToast('Estudo "'+item.nome+'" carregado. Altere e clique em Estudos Salvos > Atualizar para regravar.');
+}
+
+async function excluirEstudo(id){
+  var item=estudosCache.find(function(e){return e.id===id;});
+  if(!item)return;
+  if(!confirm('Excluir o estudo "'+item.nome+'"? Esta ação não pode ser desfeita.'))return;
+  try{
+    await window.__firestoreExcluirEstudo(id);
+    estudosCache=estudosCache.filter(function(e){return e.id!==id;});
+    if(estudoAtualId===id)estudoAtualId=null;
+    renderListaEstudos();
+  }catch(e){
+    alert('Não foi possível excluir o estudo: '+e.message);
+  }
+}
+
+
+
+/* =========================================================
+   BANCO NCM — consulta automática de alíquotas no Firestore
+   Coleção: ncm_aliquotas
+   Campos do documento: ii, ipi, pis, cofins, descricao
+   ID do doc: NCM de 8 dígitos (ex: "85322590")
+   ========================================================= */
+var _ncmCache = {}; // cache em memória para evitar consultas repetidas
+
+async function onNcmInput(id, valor) {
+  var ncm = valor.replace(/[^0-9]/g,'');
+  var statusEl = document.getElementById('ncm-status-'+id);
+  var fillBtn  = document.getElementById('ncm-fill-btn-'+id);
+
+  // Limpar estado anterior
+  if(statusEl){ statusEl.className='ncm-status'; statusEl.textContent=''; }
+  if(fillBtn)  { fillBtn.classList.remove('show'); }
+  if(fillBtn)  { fillBtn._ncmData = null; }
+
+  // Só busca quando tiver 8 dígitos
+  if(ncm.length < 8) return;
+
+  // Checar cache
+  var ncm8 = ncm.substring(0,8);
+  if(_ncmCache[ncm8] !== undefined) {
+    _aplicarResultadoNCM(id, ncm8, _ncmCache[ncm8]);
+    return;
+  }
+
+  // Mostrar loading
+  if(statusEl){ statusEl.className='ncm-status loading'; statusEl.textContent='🔍 Consultando banco de NCMs…'; }
+
+  try {
+    if(!window.__buscarNCM) throw new Error('Módulo NCM não disponível');
+    var dados = await window.__buscarNCM(ncm8);
+    _ncmCache[ncm8] = dados; // guardar no cache (null = não encontrado)
+    _aplicarResultadoNCM(id, ncm8, dados);
+  } catch(e) {
+    if(statusEl){ statusEl.className='ncm-status err'; statusEl.textContent='Erro ao consultar: '+e.message; }
+  }
+}
+
+function _aplicarResultadoNCM(id, ncm8, dados) {
+  var statusEl = document.getElementById('ncm-status-'+id);
+  var fillBtn  = document.getElementById('ncm-fill-btn-'+id);
+
+  if(!dados) {
+    if(statusEl){ statusEl.className='ncm-status err'; statusEl.textContent='NCM '+ ncm8 +' não encontrado no banco. Preencha manualmente.'; }
+    return;
+  }
+
+  var desc = dados.descricao ? ' — '+dados.descricao : '';
+  if(statusEl){
+    statusEl.className='ncm-status ok';
+    statusEl.textContent='✔ NCM encontrado'+ desc
+      +' | II: '+dados.ii+'% · IPI: '+dados.ipi+'% · PIS: '+dados.pis+'% · COFINS: '+dados.cofins+'%';
+  }
+  if(fillBtn){
+    fillBtn.classList.add('show');
+    fillBtn._ncmData = dados;
+  }
+}
+
+function preencherAliquotas(id) {
+  var fillBtn = document.getElementById('ncm-fill-btn-'+id);
+  if(!fillBtn || !fillBtn._ncmData) return;
+  var d = fillBtn._ncmData;
+  var set = function(fieldId, val){
+    var el = document.getElementById(fieldId);
+    if(el && (val !== null && val !== undefined)) el.value = val;
+  };
+  set('i_ii-'+id,    d.ii    !== undefined ? d.ii    : '');
+  set('i_ipi-'+id,   d.ipi   !== undefined ? d.ipi   : '');
+  set('i_pis-'+id,   d.pis   !== undefined ? d.pis   : '');
+  set('i_cof-'+id,   d.cofins!== undefined ? d.cofins: '');
+  if(d.icms !== undefined && d.icms !== null) set('i_icms-'+id, d.icms);
+  // Preencher descrição se o campo estiver vazio
+  var descEl = document.getElementById('i_desc-'+id);
+  if(descEl && !descEl.value && d.descricao) descEl.value = d.descricao;
+  // Feedback visual breve no botão
+  fillBtn.textContent = '✔ Preenchido!';
+  fillBtn.style.background = '#E1F5EE';
+  fillBtn.style.color = '#0F6E56';
+  setTimeout(function(){
+    fillBtn.textContent = '✔ Preencher alíquotas automático';
+    fillBtn.style.background = '';
+    fillBtn.style.color = '';
+  }, 2000);
+}
+
+/* =========================================================
+   PTAX AUTOMÁTICA — API pública do Banco Central do Brasil
+   Endpoint: ptax.bcb.gov.br (sem necessidade de autenticação)
+   ========================================================= */
+async function buscarPTAX() {
+  var btn  = document.getElementById('btn-ptax');
+  var info = document.getElementById('ptax-info');
+  var inp  = document.getElementById('f_cambio');
+  if(!btn || !inp) return;
+  btn.disabled = true;
+  btn.textContent = '\u23f3 Buscando\u2026';
+  if(info) info.textContent = '';
+  try {
+    var ptax = null, dataUsada = '';
+    // Fonte 1: OData BCB (CORS liberado)
+    for(var i = 0; i <= 5; i++) {
+      var d = new Date();
+      d.setDate(d.getDate() - i);
+      if(d.getDay()===0) d.setDate(d.getDate()-1);
+      if(d.getDay()===6) d.setDate(d.getDate()-1);
+      var mm = String(d.getMonth()+1).padStart(2,'0');
+      var dd2 = String(d.getDate()).padStart(2,'0');
+      var yyyy = d.getFullYear();
+      var dataFmt = mm+'-'+dd2+'-'+yyyy;
+      var dataExib = dd2+'/'+mm+'/'+yyyy;
+      try {
+        var enc = encodeURIComponent;
+        var url = 'https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/'
+          + 'CotacaoMoedaDia(moeda=@moeda,dataCotacao=@data)'
+          + '?@moeda=' + enc("'USD'")
+          + '&@data=' + enc("'"+dataFmt+"'")
+          + '&$top=1&$orderby=dataHoraCotacao%20desc&$format=json&$select=cotacaoCompra,dataHoraCotacao';
+        var resp = await fetch(url);
+        if(!resp.ok) continue;
+        var jdata = await resp.json();
+        if(jdata.value && jdata.value.length > 0) {
+          ptax = jdata.value[0].cotacaoVenda;
+          dataUsada = dataExib + ' ' + (jdata.value[0].dataHoraCotacao||'').substring(11,16);
+          break;
+        }
+      } catch(e2) { continue; }
+    }
+    // Fonte 2: AwesomeAPI (fallback, CORS OK)
+    if(!ptax) {
+      try {
+        var r2 = await fetch('https://economia.awesomeapi.com.br/json/last/USD-BRL');
+        var j2 = await r2.json();
+        if(j2['USDBRL'] && j2['USDBRL'].bid) {
+          ptax = parseFloat(j2['USDBRL'].bid);
+          dataUsada = 'agora (AwesomeAPI)';
+        }
+      } catch(e3) {}
+    }
+    if(ptax) {
+      inp.value = parseFloat(ptax).toFixed(4);
+      if(info){ info.textContent = '\ud83d\udce1 PTAX venda em ' + dataUsada + ' \u2014 fonte: BCB'; info.style.color='#0F6E56'; }
     } else {
       if(info){ info.textContent = 'PTAX indispon\u00edvel. Preencha manualmente.'; info.style.color='#791F1F'; }
     }
