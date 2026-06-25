@@ -295,43 +295,30 @@ textarea{resize:vertical;min-height:52px;font-size:11px}
 
 @media(max-width:600px){.dash-bar{grid-template-columns:1fr 1fr}.dash-card:last-child{display:none}}
 
-.ncm-status{display:none;font-size:10px;margin-top:3px;padding:3px 7px;border-radius:4px;font-weight:500}
-.ncm-status.ok{display:block;background:#E1F5EE;color:#0F6E56}
-.ncm-status.err{display:block;background:#FCEBEB;color:#791F1F}
-.ncm-status.loading{display:block;background:#E6F1FB;color:#185FA5}
-.ncm-fill-btn{display:none;font-size:10px;background:#dbeafe;color:#0d2d5e;border:none;border-radius:4px;padding:3px 9px;cursor:pointer;margin-top:3px;font-weight:600}
-.ncm-fill-btn:hover{background:#bfdbfe}
-.ncm-fill-btn.show{display:inline-block}
-.ptax-wrap{display:flex;align-items:flex-end;gap:6px}
-.ptax-wrap input{flex:1}
-.btn-ptax{background:#0A5C8F;border:none;border-radius:5px;color:#fff;font-size:11px;font-weight:600;padding:6px 10px;cursor:pointer;white-space:nowrap;transition:background .15s;flex-shrink:0;height:30px}
-.btn-ptax:hover{background:#0d2d5e}
-.btn-ptax:disabled{background:#aab3bd;cursor:not-allowed}
-.ptax-info{font-size:10px;color:#5a6a7e;margin-top:3px}
-.avisos-simulacao{background:#fffbeb;border:1px solid #fde68a;border-left:4px solid #f59e0b;border-radius:7px;padding:14px 16px;margin-top:14px}
-.avisos-simulacao .av-title{font-size:12px;font-weight:700;color:#78350f;margin-bottom:8px;display:flex;align-items:center;gap:6px}
-.avisos-simulacao ul{margin:0;padding-left:18px}
-.avisos-simulacao ul li{font-size:11px;color:#92400e;line-height:1.6;margin-bottom:3px}
-.icms-alerta{display:none;background:#eff6ff;border:1px solid #bfdbfe;border-left:4px solid #3b82f6;border-radius:6px;padding:10px 13px;margin-top:8px;font-size:11px;color:#1e40af;line-height:1.6}
-.icms-alerta.show{display:block}
-.btn-validacao{width:100%;margin-top:12px;background:linear-gradient(135deg,#0A5C8F,#0d2d5e);border:none;border-radius:8px;color:#fff;padding:13px 20px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s}
-.btn-validacao:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(10,30,60,.25)}
-.modal-validacao .modal-box-v{background:#fff;border-radius:12px;padding:28px 30px;max-width:480px;width:92%}
-.modal-validacao .modal-box-v h3{font-size:17px;color:#0d2d5e;font-weight:700;margin-bottom:6px}
-.modal-validacao .modal-box-v p.sub{font-size:12px;color:#7d8ea6;margin-bottom:18px;line-height:1.6}
-.modal-validacao .modal-box-v textarea{min-height:90px;resize:vertical;font-size:12px}
-.modal-validacao .modal-box-v label{font-size:12px;color:#5a6a7e;font-weight:600;display:block;margin-bottom:5px}
-.btn-enviar-analise{width:100%;background:#00A878;border:none;border-radius:7px;color:#fff;padding:12px 20px;font-size:14px;font-weight:700;cursor:pointer;margin-top:14px;transition:all .15s}
-.btn-enviar-analise:hover{background:#008f66}
-.btn-enviar-analise:disabled{background:#aab3bd;cursor:not-allowed}
-.validacao-sucesso{display:none;text-align:center;padding:20px 0 10px}
-.validacao-sucesso .vs-icon{font-size:42px;margin-bottom:10px}
-.aviso-estimativo{background:#f8faff;border:1px solid #dde2ea;border-left:4px solid #3a9bd5;border-radius:6px;padding:12px 15px;margin-bottom:12px;font-size:11px;color:#4a5568;line-height:1.7}
-.aviso-estimativo strong{color:#0d2d5e;display:block;margin-bottom:4px}
-.pdf-rodape-comercial{background:linear-gradient(135deg,#0d2d5e,#0A5C8F);border-radius:8px;padding:16px 20px;margin-top:16px;display:none}
-.pdf-rodape-comercial h4{color:#fff;font-size:13px;font-weight:700;margin-bottom:5px}
-.pdf-rodape-comercial p{color:#93c5e8;font-size:11px;line-height:1.6;margin:0}
-@media print{.pdf-rodape-comercial{display:block!important}.avisos-simulacao,.btn-validacao,.aviso-estimativo{display:none!important}}
+/* ── Avisos Simulação ── */
+.avisos-sim{background:#fffbeb;border:1px solid #fde68a;border-left:4px solid #f59e0b;border-radius:7px;padding:14px 16px;margin-top:14px}
+.avisos-sim .av-t{font-size:12px;font-weight:700;color:#78350f;margin-bottom:8px}
+.avisos-sim ul{margin:0;padding-left:18px}
+.avisos-sim ul li{font-size:11px;color:#92400e;line-height:1.6;margin-bottom:3px}
+/* ── Botão validação ── */
+.btn-val{width:100%;margin-top:12px;background:linear-gradient(135deg,#0A5C8F,#0d2d5e);border:none;border-radius:8px;color:#fff;padding:13px 20px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s}
+.btn-val:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(10,30,60,.25)}
+/* ── Modal validação ── */
+.modal-val .mv-box{background:#fff;border-radius:12px;padding:28px 30px;max-width:480px;width:92%}
+.modal-val .mv-box h3{font-size:17px;color:#0d2d5e;font-weight:700;margin-bottom:6px}
+.modal-val .mv-box .sub{font-size:12px;color:#7d8ea6;margin-bottom:18px;line-height:1.6}
+.modal-val .mv-box textarea{min-height:90px;resize:vertical;font-size:12px;width:100%;padding:8px;border:1px solid #d1d9e6;border-radius:6px;box-sizing:border-box}
+.modal-val .mv-box label{font-size:12px;color:#5a6a7e;font-weight:600;display:block;margin-bottom:5px}
+.btn-env{width:100%;background:#00A878;border:none;border-radius:7px;color:#fff;padding:12px 20px;font-size:14px;font-weight:700;cursor:pointer;margin-top:14px;transition:all .15s}
+.btn-env:hover{background:#008f66}
+.btn-env:disabled{background:#aab3bd;cursor:not-allowed}
+.val-ok{display:none;text-align:center;padding:20px 0 10px}
+.val-ok .vo-icon{font-size:42px;margin-bottom:10px}
+/* ── Rodapé PDF comercial ── */
+.pdf-rod{background:linear-gradient(135deg,#0d2d5e,#0A5C8F);border-radius:8px;padding:16px 20px;margin-top:16px;display:none}
+.pdf-rod h4{color:#fff;font-size:13px;font-weight:700;margin-bottom:5px}
+.pdf-rod p{color:#93c5e8;font-size:11px;line-height:1.6;margin:0}
+@media print{.pdf-rod{display:block!important}.avisos-sim,.btn-val{display:none!important}}
 
 </style>
 </head>
@@ -402,7 +389,6 @@ textarea{resize:vertical;min-height:52px;font-size:11px}
     if (user) {
       document.getElementById('auth-gate').remove();
       window.__currentUid = user.uid;
-      window.__currentUser = user;
       window.dispatchEvent(new CustomEvent('firebase-ready'));
 
       // ── Carregar perfil do Firestore ──
@@ -538,21 +524,23 @@ textarea{resize:vertical;min-height:52px;font-size:11px}
     await deleteDoc(doc(db, ESTUDOS_COL, id));
   };
 
+  // Buscar NCM no Firestore
   window.__buscarNCM = async function(ncm8) {
     try {
       const snap = await getDoc(doc(db, 'ncm_aliquotas', ncm8));
       return snap.exists() ? snap.data() : null;
-    } catch(e) { return null; }
+    } catch(e) { console.warn('buscarNCM:', e); return null; }
   };
 
-  window.__salvarLeadEspecializado = async function(lead) {
-    if(!window.__currentUid) throw new Error('Nao autenticado');
+  // Salvar lead especializado
+  window.__salvarLead = async function(lead) {
     const ref = doc(collection(db, 'leads_especializados'));
     await setDoc(ref, lead);
     return ref.id;
   };
 
-  window.__currentUser = null;
+  // Expor usuário atual
+  window.__getUser = function() { return currentUser; };
 </script>
 
 
@@ -647,11 +635,11 @@ textarea{resize:vertical;min-height:52px;font-size:11px}
     <div><label>Frete total (USD)</label><input id="f_frete" type="number" step="0.01" placeholder="0.00"></div>
     <div>
       <label>Taxa cambial (R$/USD)</label>
-      <div class="ptax-wrap">
-        <input id="f_cambio" type="number" step="0.0001" placeholder="5.5576">
-        <button class="btn-ptax" id="btn-ptax" onclick="buscarPTAX()">&#128225; PTAX</button>
+      <div style="display:flex;gap:6px;align-items:flex-end">
+        <input id="f_cambio" type="number" step="0.0001" placeholder="5.5576" style="flex:1">
+        <button onclick="buscarPTAX()" id="btn-ptax" style="background:#0A5C8F;border:none;border-radius:5px;color:#fff;font-size:11px;font-weight:600;padding:6px 10px;cursor:pointer;height:30px;white-space:nowrap">&#128225; PTAX</button>
       </div>
-      <div class="ptax-info" id="ptax-info"></div>
+      <div id="ptax-info" style="font-size:10px;color:#5a6a7e;margin-top:3px"></div>
     </div>
     <div><label>Qtd. total (todas NCMs)</label><input id="f_qtd" type="number" step="1" value="1"></div>
     <div>
@@ -926,36 +914,40 @@ textarea{resize:vertical;min-height:52px;font-size:11px}
   </div>
 </div>
 
-<div id="area-pos-resultado" style="display:none">
-  <div class="avisos-simulacao">
-    <div class="av-title">&#9888;&#65039; Avisos da Simula&#231;&#227;o</div>
+<div id="area-pos" style="display:none;margin-top:16px">
+  <div class="avisos-sim">
+    <div class="av-t">&#9888;&#65039; Avisos da Simula&#231;&#227;o</div>
     <ul>
       <li>Os valores poder&#227;o variar conforme a taxa cambial vigente na data do registro da DI/DUIMP.</li>
       <li>Os tributos foram calculados com base nas informa&#231;&#245;es fornecidas e possuem car&#225;ter estimativo.</li>
-      <li>Benef&#237;cios fiscais estaduais, regimes especiais, ex-tarif&#225;rios, medidas antidumping e exig&#234;ncias de &#243;rg&#227;os anuentes n&#227;o est&#227;o contemplados automaticamente nesta simula&#231;&#227;o.</li>
+      <li>Benef&#237;cios fiscais estaduais, regimes especiais, ex-tarif&#225;rios, medidas antidumping e exig&#234;ncias de &#243;rg&#227;os anuentes n&#227;o est&#227;o contemplados nesta simula&#231;&#227;o.</li>
     </ul>
   </div>
-  <button class="btn-validacao" onclick="abrirModalValidacao()">
-    &#128640; Solicitar valida&#231;&#227;o da opera&#231;&#227;o
-  </button>
+  <button class="btn-val" onclick="abrirModalVal()">&#128640; Solicitar valida&#231;&#227;o da opera&#231;&#227;o</button>
+</div>
+<div class="pdf-rod" id="pdf-rod">
+  <h4>&#129309; Precisa validar sua opera&#231;&#227;o?</h4>
+  <p>A equipe da ImportaCerto pode auxiliar na an&#225;lise tribut&#225;ria, habilita&#231;&#227;o RADAR, despacho aduaneiro e consultoria especializada em com&#233;rcio exterior.</p>
 </div>
 </div><!-- /page -->
 
 
-<div class="modal-bg modal-validacao" id="modal-validacao">
-  <div class="modal-box-v">
-    <div id="validacao-form-area">
-      <h3>&#128269; Solicitar Valida&#231;&#227;o da Opera&#231;&#227;o</h3>
-      <p class="sub">Nossa equipe especializada analisar&#225; o estudo e entrar&#225; em contato.</p>
+<div class="modal-bg modal-val" id="modal-val">
+  <div class="mv-box">
+    <div id="val-form">
+      <h3>&#128269; Solicitar Valida&#231;&#227;o</h3>
+      <p class="sub">Nossa equipe analisar&#225; o estudo e entrar&#225; em contato em breve.</p>
       <label>Descreva sua d&#250;vida <span style="font-weight:400;color:#aab3bd">(opcional)</span></label>
-      <textarea id="val-observacao" placeholder="Ex: Gostaria de validar a aplica&#231;&#227;o do ICMS reduzido..."></textarea>
-      <button class="btn-enviar-analise" id="btn-enviar-analise" onclick="enviarValidacao()">&#128233; Enviar para an&#225;lise</button>
-      <button class="mbtn mbtn-cancel" style="width:100%;margin-top:8px" onclick="fecharModalValidacao()">Cancelar</button>
+      <textarea id="val-obs" placeholder="Ex: Gostaria de validar a aplica&#231;&#227;o do ICMS reduzido..."></textarea>
+      <button class="btn-env" id="btn-env" onclick="enviarVal()">&#128233; Enviar para an&#225;lise</button>
+      <button class="mbtn mbtn-cancel" style="width:100%;margin-top:8px" onclick="fecharModalVal()">Cancelar</button>
     </div>
-    <div class="validacao-sucesso" id="validacao-sucesso">
-      <div class="vs-icon">&#9989;</div>
-      <p><strong>Solicita&#231;&#227;o enviada!</strong><br><br>Nossa equipe analisar&#225; e entrar&#225; em contato em breve.<br><span style="color:#00A878;font-weight:600">Fique atento ao seu e-mail.</span></p>
-      <button class="btn-enviar-analise" style="margin-top:16px" onclick="fecharModalValidacao()">Fechar</button>
+    <div class="val-ok" id="val-ok">
+      <div class="vo-icon">&#9989;</div>
+      <p><strong>Solicita&#231;&#227;o enviada!</strong><br><br>
+      Nossa equipe analisar&#225; as informa&#231;&#245;es e entrar&#225; em contato.<br>
+      <span style="color:#00A878;font-weight:600">Fique atento ao seu e-mail.</span></p>
+      <button class="btn-env" style="margin-top:16px" onclick="fecharModalVal()">Fechar</button>
     </div>
   </div>
 </div>
@@ -1021,11 +1013,11 @@ function gs(id){return document.getElementById(id)&&document.getElementById(id).
 function toggleReducao(id){
   var tp=document.getElementById('i_icmstp-'+id);
   var wrap=document.getElementById('i_red_wrap-'+id);
-  var alerta=document.getElementById('i_icms_alerta-'+id);
+  var al=document.getElementById('icms-alerta-'+id);
   if(!tp||!wrap)return;
-  var isReducao=tp.value==='reducao';
-  wrap.style.display=isReducao?'':'none';
-  if(alerta)alerta.classList.toggle('show',isReducao);
+  var r=tp.value==='reducao';
+  wrap.style.display=r?'':'none';
+  if(al)al.style.display=r?'block':'none';
   atualizarDivisor(id);
 }
 function atualizarDivisor(id){
@@ -1040,22 +1032,21 @@ function addItem(cf){
   iCount++;var id=iCount;items.push(id);cf=cf||{};
   var d=document.createElement('div');
   d.className='item-card';d.id='itm-'+id;
-  d.innerHTML=''
-    +'<div class="item-hdr">'
-      +'<span class="item-lbl">&#128230; Item #'+id+'</span>'
-      +'<button class="ibtn" onclick="duplicarItem('+id+')">&#10064; Duplicar</button>'
-      +'<button class="ibtn ibtn-rm" onclick="remItem('+id+')">&#215; Remover</button>'
+  d.innerHTML='<div class="item-hdr">'
+    +'<span class="item-lbl">&#128230; Item #'+id+'</span>'
+    +'<button class="ibtn" onclick="duplicarItem('+id+')">&#10064; Duplicar</button>'
+    +'<button class="ibtn ibtn-rm" onclick="remItem('+id+')">&#215; Remover</button>'
     +'</div>'
     +'<div class="g2">'
-      +'<div><label>Invoice N&#186;</label><input type="text" id="i_inv-'+id+'" placeholder="Ex: INV-2026-001" value="'+( cf.inv||'')+'"></div>'
+      +'<div><label>Invoice N&#186;</label><input type="text" id="i_inv-'+id+'" placeholder="Ex: INV-2026-001" value="'+(cf.inv||'')+'"></div>'
       +'<div><label>Descri&#231;&#227;o do produto</label><input type="text" id="i_desc-'+id+'" placeholder="Ex: CBB61-450VAC Cables" value="'+(cf.desc||'')+'"></div>'
     +'</div>'
     +'<div class="g2">'
       +'<div>'
         +'<label>NCM</label>'
         +'<input type="text" id="i_ncm-'+id+'" placeholder="Ex: 85322590" maxlength="10" value="'+(cf.ncm||'')+'" oninput="onNcmInput('+id+',this.value)">'
-        +'<div class="ncm-status" id="ncm-status-'+id+'"></div>'
-        +'<button class="ncm-fill-btn" id="ncm-fill-btn-'+id+'" onclick="preencherAliquotas('+id+')">✔ Preencher alíquotas automático</button>'
+        +'<div id="ncm-status-'+id+'" style="display:none;font-size:10px;margin-top:3px;padding:3px 7px;border-radius:4px;font-weight:500"></div>'
+        +'<button id="ncm-fill-btn-'+id+'" onclick="preencherAliquotas('+id+')" style="display:none;font-size:10px;background:#dbeafe;color:#0d2d5e;border:none;border-radius:4px;padding:3px 9px;cursor:pointer;margin-top:3px;font-weight:600">&#10004; Preencher al&#237;quotas autom&#225;tico</button>'
       +'</div>'
       +'<div><label>Valor FOB (USD)</label><input type="number" id="i_fob-'+id+'" step="0.01" placeholder="0.00" value="'+(cf.fob||'')+'"></div>'
     +'</div>'
@@ -1067,22 +1058,21 @@ function addItem(cf){
       +'<div><label>ICMS (%)</label><input type="number" id="i_icms-'+id+'" step="0.01" value="'+(cf.icms||'20')+'"></div>'
     +'</div>'
     +'<div class="g3">'
-      +'<div>'
-        +'<label>Tipo ICMS</label>'
+      +'<div><label>Tipo ICMS</label>'
         +'<select id="i_icmstp-'+id+'" onchange="toggleReducao('+id+')">'
-          +'<option value="normal"'+((!cf.icmstp||cf.icmstp==='normal')?' selected':'')+'>Normal (base cheia)</option>'
-          +'<option value="reducao"'+(cf.icmstp==='reducao'?' selected':'')+'>Redução de Base – Conv. 52/91</option>'
+          +'<option value="normal"'+((!cf.icmstp||cf.icmstp==='normal')?' selected':'')+'">Normal (base cheia)</option>'
+          +'<option value="reducao"'+(cf.icmstp==='reducao'?' selected':'')+'">Redu&#231;&#227;o de Base &#8211; Conv. 52/91</option>'
         +'</select>'
       +'</div>'
-      +'<div id="i_red_wrap-'+id+'" style="'+(cf.icmstp==='reducao'?'':\'display:none')+'">'
-        +'<label>% Redução <span style="font-size:10px;color:#aab3bd">(Ex: 8.80 ou 5.60)</span></label>'
+      +'<div id="i_red_wrap-'+id+'" style="'+(cf.icmstp==='reducao'?'':'display:none')+'">'
+        +'<label>% Redu&#231;&#227;o <span style="font-size:10px;color:#aab3bd">(Ex: 8.80 ou 5.60)</span></label>'
         +'<input type="number" id="i_red-'+id+'" step="0.01" placeholder="Ex: 8.80" value="'+(cf.red||'')+'" oninput="atualizarDivisor('+id+')">'
-        +'<small style="color:#3a9bd5;font-size:10px;display:block;margin-top:2px">Divisor: <strong id="i_div-'+id+'">—</strong></small>'
+        +'<small style="color:#3a9bd5;font-size:10px;display:block;margin-top:2px">Divisor: <strong id="i_div-'+id+'">&#8212;</strong></small>'
       +'</div>'
-      +'<div><label>Quantidade de peças</label><input type="number" id="i_qtd-'+id+'" step="1" min="1" placeholder="Ex: 1500" value="'+(cf.qtd||'')+'"></div>'
+      +'<div><label>Quantidade de pe&#231;as</label><input type="number" id="i_qtd-'+id+'" step="1" min="1" placeholder="Ex: 1500" value="'+(cf.qtd||'')+'"></div>'
     +'</div>'
-    +'<div id="i_icms_alerta-'+id+'" class="icms-alerta">'
-      +'⚠️ A aplicação de benefícios fiscais estaduais depende da análise da mercadoria, NCM, estado de destino e legislação vigente. Recomenda-se validação prévia com especialista.'
+    +'<div id="icms-alerta-'+id+'" style="display:none;background:#eff6ff;border:1px solid #bfdbfe;border-left:4px solid #3b82f6;border-radius:6px;padding:10px 13px;margin-top:8px;font-size:11px;color:#1e40af;line-height:1.6">'
+    +'&#9888;&#65039; A aplica&#231;&#227;o de benef&#237;cios fiscais estaduais depende da an&#225;lise da mercadoria, NCM, estado de destino e legisla&#231;&#227;o vigente. Recomenda-se valida&#231;&#227;o pr&#233;via com especialista.'
     +'</div>';
   document.getElementById('items-wrap').appendChild(d);
   toggleReducao(id);
@@ -1402,12 +1392,12 @@ async function calcular(){
 
   document.getElementById('resultado').classList.add('show');
   document.getElementById('resultado').scrollIntoView({behavior:'smooth',block:'start'});
-  document.getElementById('area-pos-resultado').style.display='block';
+  var ap=document.getElementById('area-pos');if(ap)ap.style.display='block';
   // ── Incrementar contador de estudos ──
   window.__incrementarEstudo && window.__incrementarEstudo().catch(()=>{});
 }
 
-function limpar(){document.getElementById('resultado').classList.remove('show');var ap=document.getElementById('area-pos-resultado');if(ap)ap.style.display='none';window.scrollTo({top:0,behavior:'smooth'});}
+function limpar(){document.getElementById('resultado').classList.remove('show');var ap=document.getElementById('area-pos');if(ap)ap.style.display='none';window.scrollTo({top:0,behavior:'smooth'});}
 function abrirModal(){
   if(!document.getElementById('resultado').classList.contains('show')){alert('Calcule o estudo primeiro.');return;}
   const plano = window.__planoAtual || 'free';
@@ -1430,6 +1420,8 @@ function confirmarPDF(){
   document.getElementById('sec-resumo').style.display='none';
   document.getElementById('pdf-header').style.display='block';
   document.getElementById('pdf-footer').style.display='block';
+  var ap=document.getElementById('area-pos');if(ap)ap.style.display='none';
+  var pr=document.getElementById('pdf-rod');if(pr)pr.style.display='block';
   // Clonar grand-total, unit-cards e obs-box para aparecerem no PDF
   var pdfArea=document.getElementById('pdf-area');
   var pdfFooterEl=document.getElementById('pdf-footer');
@@ -1451,6 +1443,8 @@ function confirmarPDF(){
       document.getElementById('pdf-footer').style.display='none';
       document.getElementById('sec-rateio-desp').style.display='';
       document.getElementById('sec-resumo').style.display='';
+      var ap2=document.getElementById('area-pos');if(ap2)ap2.style.display='block';
+      var pr2=document.getElementById('pdf-rod');if(pr2)pr2.style.display='none';
     },500);
   },200);
 }
@@ -1748,128 +1742,143 @@ async function excluirEstudo(id){
   }
 }
 
-/* ── NCM LOOKUP ── */
-var _ncmCache={};
-async function onNcmInput(id,valor){
-  var ncm=valor.replace(/[^0-9]/g,'');
-  var sEl=document.getElementById('ncm-status-'+id);
-  var btn=document.getElementById('ncm-fill-btn-'+id);
-  if(sEl){sEl.className='ncm-status';sEl.textContent='';}
-  if(btn){btn.classList.remove('show');btn._ncmData=null;}
-  if(ncm.length<8)return;
-  var ncm8=ncm.substring(0,8);
-  if(_ncmCache[ncm8]!==undefined){_aplicarNCM(id,ncm8,_ncmCache[ncm8]);return;}
-  if(sEl){sEl.className='ncm-status loading';sEl.textContent='Consultando...';}
-  try{
-    if(!window.__buscarNCM)throw new Error('Firebase nao carregado');
-    var dados=await window.__buscarNCM(ncm8);
-    _ncmCache[ncm8]=dados;
-    _aplicarNCM(id,ncm8,dados);
-  }catch(e){if(sEl){sEl.className='ncm-status err';sEl.textContent='Erro: '+e.message;}}
+/* ── NCM LOOKUP ─────────────────────────────────────── */
+var _ncmCache = {};
+async function onNcmInput(id, val) {
+  var ncm = val.replace(/[^0-9]/g, '');
+  var sEl = document.getElementById('ncm-status-' + id);
+  var btn = document.getElementById('ncm-fill-btn-' + id);
+  if (sEl) { sEl.style.display = 'none'; sEl.textContent = ''; }
+  if (btn) { btn.style.display = 'none'; btn._d = null; }
+  if (ncm.length < 8) return;
+  var n8 = ncm.substring(0, 8);
+  if (_ncmCache[n8] !== undefined) { _showNCM(id, n8, _ncmCache[n8]); return; }
+  if (sEl) { sEl.style.cssText = 'display:block;font-size:10px;margin-top:3px;padding:3px 7px;border-radius:4px;font-weight:500;background:#E6F1FB;color:#185FA5'; sEl.textContent = 'Consultando...'; }
+  try {
+    if (!window.__buscarNCM) throw new Error('Firebase nao pronto');
+    var dados = await window.__buscarNCM(n8);
+    _ncmCache[n8] = dados;
+    _showNCM(id, n8, dados);
+  } catch(e) {
+    if (sEl) { sEl.style.cssText = 'display:block;font-size:10px;margin-top:3px;padding:3px 7px;border-radius:4px;font-weight:500;background:#FCEBEB;color:#791F1F'; sEl.textContent = 'Erro: ' + e.message; }
+  }
 }
-function _aplicarNCM(id,ncm8,dados){
-  var sEl=document.getElementById('ncm-status-'+id);
-  var btn=document.getElementById('ncm-fill-btn-'+id);
-  if(!dados){
-    if(sEl){sEl.className='ncm-status err';sEl.textContent='NCM '+ncm8+' nao encontrado. Preencha manualmente.';}
+function _showNCM(id, n8, dados) {
+  var sEl = document.getElementById('ncm-status-' + id);
+  var btn = document.getElementById('ncm-fill-btn-' + id);
+  if (!dados) {
+    if (sEl) { sEl.style.cssText = 'display:block;font-size:10px;margin-top:3px;padding:3px 7px;border-radius:4px;font-weight:500;background:#FCEBEB;color:#791F1F'; sEl.textContent = 'NCM ' + n8 + ' nao encontrado. Preencha manualmente.'; }
     return;
   }
-  if(sEl){
-    sEl.className='ncm-status ok';
-    sEl.textContent='✔ NCM encontrado — '+(dados.descricao||'')+' | II: '+dados.ii+'% · IPI: '+dados.ipi+'% · PIS: '+dados.pis+'% · COFINS: '+dados.cofins+'%';
+  if (sEl) {
+    sEl.style.cssText = 'display:block;font-size:10px;margin-top:3px;padding:3px 7px;border-radius:4px;font-weight:500;background:#E1F5EE;color:#0F6E56';
+    sEl.textContent = '\u2714 ' + (dados.descricao || n8) + ' | II: ' + dados.ii + '% \u00b7 IPI: ' + dados.ipi + '% \u00b7 PIS: ' + dados.pis + '% \u00b7 COFINS: ' + dados.cofins + '%';
   }
-  if(btn){btn.classList.add('show');btn._ncmData=dados;}
+  if (btn) { btn.style.display = 'inline-block'; btn._d = dados; }
+  preencherAliquotas(id);
 }
-function preencherAliquotas(id){
-  var btn=document.getElementById('ncm-fill-btn-'+id);
-  if(!btn||!btn._ncmData)return;
-  var d=btn._ncmData;
-  var s=function(fid,val){var el=document.getElementById(fid);if(el&&val!==undefined&&val!==null)el.value=val;};
-  s('i_ii-'+id,d.ii);s('i_ipi-'+id,d.ipi);s('i_pis-'+id,d.pis);s('i_cof-'+id,d.cofins);
-  if(d.icms!=null)s('i_icms-'+id,d.icms);
-  var descEl=document.getElementById('i_desc-'+id);
-  if(descEl&&!descEl.value&&d.descricao)descEl.value=d.descricao;
-  btn.textContent='✔ Preenchido!';btn.style.background='#E1F5EE';btn.style.color='#0F6E56';
-  setTimeout(function(){btn.textContent='✔ Preencher alíquotas automático';btn.style.background='';btn.style.color='';},2000);
-}
-
-/* ── PTAX ── */
-async function buscarPTAX(){
-  var btn=document.getElementById('btn-ptax');
-  var info=document.getElementById('ptax-info');
-  var inp=document.getElementById('f_cambio');
-  if(!btn||!inp)return;
-  btn.disabled=true;btn.textContent='...';
-  if(info)info.textContent='';
-  try{
-    var ptax=null,dataUsada='';
-    for(var i=0;i<=5;i++){
-      var d=new Date();d.setDate(d.getDate()-i);
-      if(d.getDay()===0)d.setDate(d.getDate()-1);
-      if(d.getDay()===6)d.setDate(d.getDate()-1);
-      var mm=String(d.getMonth()+1).padStart(2,'0');
-      var dd2=String(d.getDate()).padStart(2,'0');
-      var yyyy=d.getFullYear();
-      var dataExib=dd2+'/'+mm+'/'+yyyy;
-      try{
-        var enc=encodeURIComponent;
-        var url='https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/'
-          +'CotacaoMoedaDia(moeda=@moeda,dataCotacao=@data)'
-          +'?@moeda='+enc("'USD'")+'&@data='+enc("'"+mm+'-'+dd2+'-'+yyyy+"'")
-          +'&$top=1&$orderby=dataHoraCotacao%20desc&$format=json&$select=cotacaoVenda,dataHoraCotacao';
-        var resp=await fetch(url);
-        if(!resp.ok)continue;
-        var j=await resp.json();
-        if(j.value&&j.value.length>0){ptax=j.value[0].cotacaoVenda;dataUsada=dataExib+' '+(j.value[0].dataHoraCotacao||'').substring(11,16);break;}
-      }catch(e2){continue;}
-    }
-    if(!ptax){
-      try{
-        var r2=await fetch('https://economia.awesomeapi.com.br/json/last/USD-BRL');
-        var j2=await r2.json();
-        if(j2['USDBRL']&&j2['USDBRL'].ask){ptax=parseFloat(j2['USDBRL'].ask);dataUsada='agora (AwesomeAPI)';}
-      }catch(e3){}
-    }
-    if(ptax){
-      inp.value=parseFloat(ptax).toFixed(4);
-      if(info){info.textContent='&#128225; PTAX venda em '+dataUsada+' — fonte: BCB';info.style.color='#0F6E56';}
-    }else{
-      if(info){info.textContent='PTAX indisponível. Preencha manualmente.';info.style.color='#791F1F';}
-    }
-  }catch(e){if(info){info.textContent='Erro: '+e.message;info.style.color='#791F1F';}}
-  finally{btn.disabled=false;btn.textContent='&#128225; PTAX';}
+function preencherAliquotas(id) {
+  var btn = document.getElementById('ncm-fill-btn-' + id);
+  if (!btn || !btn._d) return;
+  var d = btn._d;
+  var s = function(fid, v) { var el = document.getElementById(fid); if (el && v != null) el.value = v; };
+  s('i_ii-' + id, d.ii); s('i_ipi-' + id, d.ipi);
+  s('i_pis-' + id, d.pis); s('i_cof-' + id, d.cofins);
+  if (d.icms != null) s('i_icms-' + id, d.icms);
+  var dEl = document.getElementById('i_desc-' + id);
+  if (dEl && !dEl.value && d.descricao) dEl.value = d.descricao;
+  btn.textContent = '\u2714 Preenchido!';
+  setTimeout(function() { btn.textContent = '\u2714 Preencher al\u00edquotas autom\u00e1tico'; }, 2000);
 }
 
-/* ── MODAL VALIDACAO ── */
-function abrirModalValidacao(){
-  document.getElementById('val-observacao').value='';
-  document.getElementById('validacao-form-area').style.display='block';
-  document.getElementById('validacao-sucesso').style.display='none';
-  document.getElementById('modal-validacao').classList.add('show');
-}
-function fecharModalValidacao(){document.getElementById('modal-validacao').classList.remove('show');}
-async function enviarValidacao(){
-  var btn=document.getElementById('btn-enviar-analise');
-  btn.disabled=true;btn.textContent='Enviando...';
-  try{
-    var obs=document.getElementById('val-observacao').value.trim();
-    var hoje=new Date().toISOString().split('T')[0];
-    var ano=new Date().getFullYear();
-    var rand=String(Math.floor(Math.random()*99999)).padStart(5,'0');
-    var ncmList=[];
-    document.querySelectorAll('[id^="i_ncm-"]').forEach(function(el){if(el.value)ncmList.push(el.value);});
-    var uid=window.__currentUid||'';
-    var email=(window.__currentUser&&window.__currentUser.email)||'';
-    var empresa=document.getElementById('f_imp')?document.getElementById('f_imp').value:'';
-    var lead={userId:uid,estudoId:'EVI-'+ano+'-'+rand,email:email,empresa:empresa,
-      ncms:ncmList,observacao:obs,status:'Novo',dataSolicitacao:hoje};
-    await window.__salvarLeadEspecializado(lead);
-    document.getElementById('validacao-form-area').style.display='none';
-    document.getElementById('validacao-sucesso').style.display='block';
-  }catch(e){alert('Erro ao enviar. Tente novamente.');console.error(e);}
-  finally{btn.disabled=false;btn.textContent='&#128233; Enviar para análise';}
+/* ── PTAX ────────────────────────────────────────────── */
+async function buscarPTAX() {
+  var btn = document.getElementById('btn-ptax');
+  var info = document.getElementById('ptax-info');
+  var inp = document.getElementById('f_cambio');
+  if (!btn || !inp) return;
+  btn.disabled = true; btn.textContent = '...';
+  if (info) info.textContent = '';
+  var ptax = null, dataUsada = '';
+  try {
+    for (var i = 0; i <= 5; i++) {
+      var d = new Date(); d.setDate(d.getDate() - i);
+      if (d.getDay() === 0) d.setDate(d.getDate() - 1);
+      if (d.getDay() === 6) d.setDate(d.getDate() - 1);
+      var mm = String(d.getMonth() + 1).padStart(2, '0');
+      var dd = String(d.getDate()).padStart(2, '0');
+      var yyyy = d.getFullYear();
+      try {
+        var url = 'https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/'
+          + 'CotacaoMoedaDia(moeda=@moeda,dataCotacao=@data)'
+          + '?@moeda=' + encodeURIComponent("'USD'")
+          + '&@data=' + encodeURIComponent("'" + mm + '-' + dd + '-' + yyyy + "'")
+          + '&$top=1&$orderby=dataHoraCotacao%20desc&$format=json&$select=cotacaoVenda,dataHoraCotacao';
+        var r = await fetch(url);
+        if (!r.ok) continue;
+        var j = await r.json();
+        if (j.value && j.value.length > 0) {
+          ptax = j.value[0].cotacaoVenda;
+          dataUsada = dd + '/' + mm + '/' + yyyy + ' ' + (j.value[0].dataHoraCotacao || '').substring(11, 16);
+          break;
+        }
+      } catch(e2) { continue; }
+    }
+    // Fallback AwesomeAPI
+    if (!ptax) {
+      try {
+        var r2 = await fetch('https://economia.awesomeapi.com.br/json/last/USD-BRL');
+        var j2 = await r2.json();
+        if (j2['USDBRL'] && j2['USDBRL'].ask) { ptax = parseFloat(j2['USDBRL'].ask); dataUsada = 'agora'; }
+      } catch(e3) {}
+    }
+    if (ptax) {
+      inp.value = parseFloat(ptax).toFixed(4);
+      if (info) { info.style.color = '#0F6E56'; info.innerHTML = '&#128225; PTAX venda em ' + dataUsada + ' &mdash; fonte: BCB'; }
+    } else {
+      if (info) { info.style.color = '#791F1F'; info.textContent = 'PTAX indispon\u00edvel. Preencha manualmente.'; }
+    }
+  } catch(e) {
+    if (info) { info.style.color = '#791F1F'; info.textContent = 'Erro: ' + e.message; }
+  } finally {
+    btn.disabled = false; btn.innerHTML = '&#128225; PTAX';
+  }
 }
 
+/* ── MODAL VALIDAÇÃO ─────────────────────────────────── */
+function abrirModalVal() {
+  document.getElementById('val-obs').value = '';
+  document.getElementById('val-form').style.display = 'block';
+  document.getElementById('val-ok').style.display = 'none';
+  document.getElementById('modal-val').classList.add('show');
+}
+function fecharModalVal() { document.getElementById('modal-val').classList.remove('show'); }
+async function enviarVal() {
+  var btn = document.getElementById('btn-env');
+  btn.disabled = true; btn.textContent = 'Enviando...';
+  try {
+    var user = window.__getUser ? window.__getUser() : null;
+    var ncmList = [];
+    document.querySelectorAll('[id^="i_ncm-"]').forEach(function(el) { if (el.value) ncmList.push(el.value); });
+    var lead = {
+      userId: user ? user.uid : '',
+      email: user ? user.email : '',
+      empresa: document.getElementById('f_imp') ? document.getElementById('f_imp').value : '',
+      ncms: ncmList,
+      observacao: document.getElementById('val-obs').value.trim(),
+      estudoId: 'EVI-' + new Date().getFullYear() + '-' + String(Math.floor(Math.random()*99999)).padStart(5,'0'),
+      status: 'Novo',
+      dataSolicitacao: new Date().toISOString().split('T')[0]
+    };
+    if (window.__salvarLead) await window.__salvarLead(lead);
+    document.getElementById('val-form').style.display = 'none';
+    document.getElementById('val-ok').style.display = 'block';
+  } catch(e) {
+    alert('Erro ao enviar. Tente novamente.'); console.error(e);
+  } finally {
+    btn.disabled = false; btn.innerHTML = '&#128233; Enviar para an\u00e1lise';
+  }
+}
 
 addItem();
 
