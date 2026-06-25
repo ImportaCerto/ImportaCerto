@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/png" href="data:image/png;base64,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">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ImportaCerto — Criar Conta</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#0A5C8F;--navy2:#0d3a5e;--blue:#00A878;--lblue:#33c9a0;
+  --green:#00A878;--red:#C0392B;
+  --g50:#F4F7FB;--g100:#E9EEF5;--g200:#D4DCE8;--g400:#7D8EA6;--g500:#52657D;--g700:#253A56;--g800:#152438;
+  --font:'Segoe UI',system-ui,sans-serif;
+  --sh-card:0 8px 40px rgba(10,92,143,.28),0 2px 8px rgba(0,0,0,.12);
+  --sh-inp:0 0 0 3px rgba(0,168,120,.18);
+  --r10:10px;--r12:12px;--r20:20px;
+}
+html,body{height:100%;font-family:var(--font)}
+body{
+  background:var(--navy2);
+  display:flex;align-items:flex-start;justify-content:center;
+  min-height:100vh;overflow-x:hidden;position:relative;padding:1.5rem 1rem;
+}
+
+/* ── Fundo ── */
+body::before{
+  content:'';position:fixed;inset:0;
+  background:
+    radial-gradient(ellipse 80% 60% at 10% 20%,rgba(0,168,120,.15) 0%,transparent 60%),
+    radial-gradient(ellipse 60% 50% at 90% 80%,rgba(10,92,143,.2) 0%,transparent 55%),
+    linear-gradient(160deg,#04243a 0%,#0A5C8F 55%,#063d5e 100%);
+  z-index:0;
+}
+.bg-grid{
+  position:fixed;inset:0;z-index:0;
+  background-image:
+    linear-gradient(rgba(255,255,255,.022) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.022) 1px,transparent 1px);
+  background-size:44px 44px;
+  mask-image:radial-gradient(ellipse 90% 80% at 50% 50%,black,transparent);
+}
+
+/* ── Card ── */
+.screen{position:relative;z-index:10;width:100%;max-width:480px;padding-bottom:2rem}
+.card{
+  background:rgba(255,255,255,.97);
+  border-radius:var(--r20);
+  box-shadow:var(--sh-card);
+  width:100%;overflow:hidden;
+  animation:fadeUp .3s ease;
+}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── Card Header ── */
+.card-header{
+  background:linear-gradient(135deg,#0A5C8F 0%,#063d5e 100%);
+  padding:1.75rem 2rem 1.5rem;text-align:center;
+}
+.logo-wrap{
+  width:68px;height:68px;
+  background:rgba(255,255,255,.1);
+  border:2px solid rgba(255,255,255,.2);
+  border-radius:var(--r12);
+  display:inline-flex;align-items:center;justify-content:center;
+  margin-bottom:11px;
+}
+.logo-wrap svg{filter:drop-shadow(0 2px 6px rgba(0,168,120,.4))}
+.brand-name{font-size:19px;font-weight:700;color:#fff;letter-spacing:.01em;line-height:1.2}
+.brand-name span{color:#00A878}
+.brand-sub{font-size:11px;color:rgba(255,255,255,.55);margin-top:4px;letter-spacing:.06em;text-transform:uppercase}
+.steps-bar{
+  display:flex;align-items:center;justify-content:center;
+  gap:6px;margin-top:1.1rem;
+}
+.step-dot{
+  width:8px;height:8px;border-radius:50%;
+  background:rgba(255,255,255,.3);transition:all .25s;
+}
+.step-dot.active{background:#00A878;transform:scale(1.3)}
+.step-dot.done{background:rgba(255,255,255,.6)}
+
+/* ── Card Body ── */
+.card-body{padding:1.75rem 2rem 1.4rem}
+.step-panel{display:none}
+.step-panel.active{display:block;animation:fadeUp .2s ease}
+
+.step-title{font-size:15px;font-weight:700;color:var(--g800);margin-bottom:4px}
+.step-desc{font-size:12px;color:var(--g400);margin-bottom:1.25rem;line-height:1.5}
+
+/* ── Fields ── */
+.field{margin-bottom:1rem}
+.field label{display:block;font-size:12px;font-weight:600;color:var(--g700);margin-bottom:5px;letter-spacing:.02em}
+.inp-wrap{position:relative;display:flex;align-items:center}
+.inp-wrap input{
+  width:100%;padding:11px 40px 11px 13px;
+  font-size:13.5px;color:var(--g800);font-family:var(--font);
+  background:var(--g50);border:1.5px solid var(--g200);
+  border-radius:var(--r10);outline:none;
+  transition:border-color .15s,box-shadow .15s;
+}
+.inp-wrap input:focus{border-color:var(--green);box-shadow:var(--sh-inp);background:#fff}
+.inp-wrap input.err{border-color:var(--red);box-shadow:0 0 0 3px rgba(192,57,43,.14)}
+.eye-btn{
+  position:absolute;right:11px;background:none;border:none;cursor:pointer;
+  color:var(--g400);display:flex;align-items:center;padding:4px;
+  border-radius:6px;transition:color .15s;line-height:1;
+}
+.eye-btn:hover{color:var(--green)}
+
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+/* ── Select ── */
+.sel-wrap select{
+  width:100%;padding:11px 13px;
+  font-size:13px;color:var(--g800);font-family:var(--font);
+  background:var(--g50);border:1.5px solid var(--g200);
+  border-radius:var(--r10);outline:none;cursor:pointer;
+  transition:border-color .15s,box-shadow .15s;appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%237D8EA6' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 13px center;
+  padding-right:36px;
+}
+.sel-wrap select:focus{border-color:var(--green);box-shadow:var(--sh-inp);background-color:#fff}
+
+/* ── Radio/Checkbox cards ── */
+.radio-group{display:flex;flex-direction:column;gap:7px}
+.radio-card{
+  display:flex;align-items:center;gap:10px;
+  padding:9px 13px;border:1.5px solid var(--g200);border-radius:var(--r10);
+  cursor:pointer;transition:all .15s;background:var(--g50);
+}
+.radio-card:hover{border-color:var(--green);background:#f0fdf9}
+.radio-card input[type=radio]{
+  accent-color:var(--green);width:15px;height:15px;flex-shrink:0;cursor:pointer;
+}
+.radio-card.selected{border-color:var(--green);background:#f0fdf9}
+.radio-card span{font-size:13px;color:var(--g700)}
+
+/* Radar cards – 2 colunas */
+.radar-group{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px}
+
+/* ── Senha força ── */
+.pwd-strength{margin-top:6px;height:4px;border-radius:2px;background:var(--g200);overflow:hidden}
+.pwd-bar{height:100%;width:0;border-radius:2px;transition:all .3s;background:var(--red)}
+.pwd-hint{font-size:11px;color:var(--g400);margin-top:4px}
+
+/* ── Termos ── */
+.terms-wrap{display:flex;align-items:flex-start;gap:9px;margin-top:.5rem}
+.terms-wrap input[type=checkbox]{accent-color:var(--green);width:15px;height:15px;flex-shrink:0;margin-top:2px;cursor:pointer}
+.terms-wrap label{font-size:12px;color:var(--g500);line-height:1.5;cursor:pointer}
+.terms-wrap a{color:var(--green);text-decoration:none}
+.terms-wrap a:hover{text-decoration:underline}
+
+/* ── Erro ── */
+.error-msg{
+  display:none;align-items:center;gap:7px;
+  background:#FEF0EE;border:1px solid #F5C6C0;
+  border-radius:9px;padding:9px 12px;
+  font-size:12px;color:var(--red);font-weight:500;
+  margin-bottom:14px;
+}
+.error-msg::before{content:'⚠';font-size:13px;flex-shrink:0}
+
+/* ── Botões ── */
+.btn-row{display:flex;gap:10px;margin-top:1.25rem}
+.btn-primary{
+  flex:1;padding:12px;
+  background:linear-gradient(135deg,#0A5C8F,#00A878);
+  color:#fff;font-size:14px;font-weight:600;font-family:var(--font);
+  border:none;border-radius:var(--r10);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  transition:opacity .15s,transform .1s,box-shadow .15s;
+  box-shadow:0 4px 16px rgba(0,168,120,.3);letter-spacing:.01em;
+}
+.btn-primary:hover:not(:disabled){opacity:.9;transform:translateY(-1px);box-shadow:0 6px 20px rgba(0,168,120,.38)}
+.btn-primary:active:not(:disabled){transform:translateY(0)}
+.btn-primary:disabled{opacity:.6;cursor:not-allowed}
+.btn-back{
+  padding:12px 16px;background:none;
+  border:1.5px solid var(--g200);border-radius:var(--r10);
+  color:var(--g500);font-size:13px;font-family:var(--font);cursor:pointer;
+  transition:all .15s;
+}
+.btn-back:hover{border-color:var(--g400);color:var(--g700)}
+
+/* ── Card Footer ── */
+.card-footer{
+  padding:.9rem 2rem 1.4rem;border-top:1px solid var(--g100);
+  display:flex;align-items:center;justify-content:center;gap:6px;
+}
+.footer-text{font-size:12px;color:var(--g400)}
+.btn-ghost{
+  background:none;border:none;cursor:pointer;font-family:var(--font);
+  font-size:12.5px;color:var(--green);font-weight:500;
+  padding:4px 2px;transition:color .15s;text-decoration:none;display:inline-block;
+}
+.btn-ghost:hover{color:var(--navy);text-decoration:underline}
+
+/* ── Spinner ── */
+.spinner{display:inline-block;width:15px;height:15px;border:2.5px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:spin .65s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-7px)}40%{transform:translateX(7px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}
+.shake{animation:shake .36s ease}
+
+/* ── Sucesso ── */
+.success-screen{
+  display:none;flex-direction:column;align-items:center;
+  text-align:center;padding:2rem 2rem 2.5rem;gap:14px;
+}
+.success-icon{
+  width:72px;height:72px;
+  background:linear-gradient(135deg,#0A5C8F,#00A878);
+  border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:32px;margin-bottom:4px;
+  box-shadow:0 8px 24px rgba(0,168,120,.35);
+}
+.success-title{font-size:18px;font-weight:700;color:var(--g800)}
+.success-desc{font-size:13px;color:var(--g500);line-height:1.7;max-width:320px}
+.success-plan{
+  background:linear-gradient(135deg,#f0fdf9,#e6f7f1);
+  border:1.5px solid #b2edda;border-radius:var(--r12);
+  padding:14px 20px;width:100%;
+}
+.success-plan-title{font-size:11px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.success-plan-item{font-size:12.5px;color:var(--g700);padding:3px 0;display:flex;align-items:center;gap:7px}
+.success-plan-item::before{content:'✓';color:var(--green);font-weight:700;flex-shrink:0}
+
+/* ── Global footer ── */
+.global-footer{margin-top:18px;font-size:11px;color:rgba(255,255,255,.3);letter-spacing:.03em;text-align:center}
+</style>
+
+<!-- Firebase SDK -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import {
+    getAuth,
+    createUserWithEmailAndPassword,
+    updateProfile,
+    sendEmailVerification,
+    onAuthStateChanged
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import {
+    getFirestore, doc, setDoc, serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey:            "AIzaSyBga259TJkUvs6lsB_-YwigJKO_3ktd1dc",
+    authDomain:        "importacerto-49536.firebaseapp.com",
+    projectId:         "importacerto-49536",
+    storageBucket:     "importacerto-49536.firebasestorage.app",
+    messagingSenderId: "478765697448",
+    appId:             "1:478765697448:web:c84bb6a6ec581391dd359d"
+  };
+
+  const app  = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db   = getFirestore(app);
+
+  // Se já logado, redireciona
+  onAuthStateChanged(auth, user => {
+    if (user) window.location.href = 'index.html';
+  });
+
+  window.__doCadastro = async function() {
+    const nome   = document.getElementById('nome').value.trim();
+    const email  = document.getElementById('email').value.trim();
+    const senha  = document.getElementById('senha').value;
+    const senha2 = document.getElementById('senha2').value;
+    const perfil = document.querySelector('input[name="perfil"]:checked')?.value || '';
+    const radar  = document.querySelector('input[name="radar"]:checked')?.value || '';
+    const termos = document.getElementById('termos').checked;
+    const btn    = document.getElementById('btn-cadastrar');
+    const errEl  = document.getElementById('cadastro-error');
+
+    clearError(errEl);
+
+    // Validações
+    if (!nome)           { showError(errEl,'Informe seu nome completo.'); return; }
+    if (!email)          { showError(errEl,'Informe seu e-mail.'); return; }
+    if (senha.length < 6){ showError(errEl,'A senha deve ter pelo menos 6 caracteres.'); return; }
+    if (senha !== senha2){ showError(errEl,'As senhas não coincidem.'); shakeCard(); return; }
+    if (!termos)         { showError(errEl,'Aceite os termos para continuar.'); return; }
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Criando conta…';
+
+    try {
+      // 1. Criar usuário no Firebase Auth
+      const cred = await createUserWithEmailAndPassword(auth, email, senha);
+      const uid  = cred.user.uid;
+
+      // 2. Atualizar displayName
+      await updateProfile(cred.user, { displayName: nome });
+
+      // 3. Enviar verificação de e-mail
+      await sendEmailVerification(cred.user);
+
+      // 4. Salvar perfil no Firestore
+      await setDoc(doc(db, 'usuarios', uid), {
+        uid,
+        nome,
+        email,
+        perfil:    perfil || 'Não informado',
+        radar:     radar  || 'Não informado',
+        plano:     'free',
+        estudosMes: 0,
+        mesReferencia: new Date().toISOString().slice(0,7), // "2026-06"
+        criadoEm:  serverTimestamp(),
+        ativo:     true
+      });
+
+      // 5. Mostrar tela de sucesso
+      showSuccess(nome);
+
+    } catch(e) {
+      btn.disabled = false;
+      btn.innerHTML = 'Criar minha conta';
+      showError(errEl, firebaseError(e.code));
+      shakeCard();
+    }
+  };
+
+  function firebaseError(code) {
+    const map = {
+      'auth/email-already-in-use':   'Este e-mail já possui uma conta. Faça login.',
+      'auth/invalid-email':          'E-mail inválido.',
+      'auth/weak-password':          'Senha muito fraca. Use pelo menos 6 caracteres.',
+      'auth/network-request-failed': 'Falha de rede. Verifique sua conexão.',
+      'auth/too-many-requests':      'Muitas tentativas. Aguarde alguns minutos.',
+    };
+    return map[code] || 'Erro inesperado. Tente novamente.';
+  }
+
+  function showError(el, msg) { el.textContent = msg; el.style.display = 'flex'; }
+  function clearError(el)     { el.style.display = 'none'; el.textContent = ''; }
+  function shakeCard()        {
+    const c = document.getElementById('main-card');
+    c.classList.remove('shake'); void c.offsetWidth; c.classList.add('shake');
+  }
+  function showSuccess(nome) {
+    document.getElementById('main-card').style.display = 'none';
+    const sc = document.getElementById('success-card');
+    sc.style.display = 'flex';
+    sc.querySelector('.success-nome').textContent = nome.split(' ')[0];
+    // Redireciona para index após 4s
+    setTimeout(() => window.location.href = 'index.html', 4000);
+  }
+</script>
+
+</head>
+<body>
+
+<div class="bg-grid"></div>
+
+<div class="screen">
+
+  <!-- ══ CARD PRINCIPAL ══ -->
+  <div class="card" id="main-card">
+
+    <div class="card-header">
+      <div class="logo-wrap">
+        <svg width="48" height="48" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M22 2L38 10V22C38 31.5 30.5 38.8 22 42C13.5 38.8 6 31.5 6 22V10L22 2Z" fill="#00A878" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"/>
+          <path d="M14 22L20 28L30 17" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="brand-name">Importa<span>Certo</span></div>
+      <div class="brand-sub">Criar conta gratuita</div>
+
+      <!-- Indicador de etapas -->
+      <div class="steps-bar">
+        <div class="step-dot active" id="dot-1"></div>
+        <div class="step-dot" id="dot-2"></div>
+        <div class="step-dot" id="dot-3"></div>
+      </div>
+    </div>
+
+    <div class="card-body">
+      <div id="cadastro-error" class="error-msg"></div>
+
+      <!-- ═══ ETAPA 1 – Dados de acesso ═══ -->
+      <div class="step-panel active" id="step-1">
+        <div class="step-title">Dados de acesso</div>
+        <div class="step-desc">Passo 1 de 3 · Crie seu login no ImportaCerto</div>
+
+        <div class="field">
+          <label for="nome">Nome completo</label>
+          <div class="inp-wrap">
+            <input type="text" id="nome" placeholder="Seu nome completo"
+              autocomplete="name"
+              onkeydown="if(event.key==='Enter')document.getElementById('email').focus()">
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="email">E-mail</label>
+          <div class="inp-wrap">
+            <input type="email" id="email" placeholder="seu@email.com.br"
+              autocomplete="email"
+              onkeydown="if(event.key==='Enter')document.getElementById('senha').focus()">
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="senha">Senha</label>
+          <div class="inp-wrap">
+            <input type="password" id="senha" placeholder="Mínimo 6 caracteres"
+              autocomplete="new-password"
+              oninput="checkSenha(this.value)"
+              onkeydown="if(event.key==='Enter')document.getElementById('senha2').focus()">
+            <button class="eye-btn" id="eye-btn" onclick="toggleSenha()" type="button" aria-label="Mostrar senha">
+              <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+          <div class="pwd-strength"><div class="pwd-bar" id="pwd-bar"></div></div>
+          <div class="pwd-hint" id="pwd-hint">Digite uma senha</div>
+        </div>
+
+        <div class="field">
+          <label for="senha2">Confirmar senha</label>
+          <div class="inp-wrap">
+            <input type="password" id="senha2" placeholder="Repita a senha"
+              autocomplete="new-password"
+              onkeydown="if(event.key==='Enter')irParaStep(2)">
+          </div>
+        </div>
+
+        <div class="btn-row" style="margin-top:1rem">
+          <button class="btn-primary" onclick="validarStep1()" type="button">
+            Próximo →
+          </button>
+        </div>
+      </div>
+
+      <!-- ═══ ETAPA 2 – Perfil ═══ -->
+      <div class="step-panel" id="step-2">
+        <div class="step-title">Qual é o seu perfil?</div>
+        <div class="step-desc">Passo 2 de 3 · Isso nos ajuda a personalizar sua experiência</div>
+
+        <div class="field">
+          <label>Selecione o que melhor te descreve</label>
+          <div class="radio-group" id="perfil-group">
+            <label class="radio-card" onclick="selectRadio(this,'perfil')">
+              <input type="radio" name="perfil" value="Importador">
+              <span>🏭 Importador</span>
+            </label>
+            <label class="radio-card" onclick="selectRadio(this,'perfil')">
+              <input type="radio" name="perfil" value="Empresa que pretende importar">
+              <span>🏢 Empresa que pretende importar</span>
+            </label>
+            <label class="radio-card" onclick="selectRadio(this,'perfil')">
+              <input type="radio" name="perfil" value="Trading Company">
+              <span>🌐 Trading Company</span>
+            </label>
+            <label class="radio-card" onclick="selectRadio(this,'perfil')">
+              <input type="radio" name="perfil" value="Despachante Aduaneiro">
+              <span>📋 Despachante Aduaneiro</span>
+            </label>
+            <label class="radio-card" onclick="selectRadio(this,'perfil')">
+              <input type="radio" name="perfil" value="Consultor">
+              <span>💼 Consultor</span>
+            </label>
+            <label class="radio-card" onclick="selectRadio(this,'perfil')">
+              <input type="radio" name="perfil" value="Estudante">
+              <span>🎓 Estudante</span>
+            </label>
+            <label class="radio-card" onclick="selectRadio(this,'perfil')">
+              <input type="radio" name="perfil" value="Outro">
+              <span>✦ Outro</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn-back" onclick="irParaStep(1)" type="button">← Voltar</button>
+          <button class="btn-primary" onclick="irParaStep(3)" type="button">
+            Próximo →
+          </button>
+        </div>
+      </div>
+
+      <!-- ═══ ETAPA 3 – RADAR + Termos ═══ -->
+      <div class="step-panel" id="step-3">
+        <div class="step-title">Quase lá!</div>
+        <div class="step-desc">Passo 3 de 3 · Mais um detalhe importante</div>
+
+        <div class="field">
+          <label>Você já possui RADAR (habilitação na RFB)?</label>
+          <div class="radio-group radar-group" id="radar-group">
+            <label class="radio-card" onclick="selectRadio(this,'radar')">
+              <input type="radio" name="radar" value="Sim">
+              <span>✅ Sim</span>
+            </label>
+            <label class="radio-card" onclick="selectRadio(this,'radar')">
+              <input type="radio" name="radar" value="Não">
+              <span>❌ Não</span>
+            </label>
+            <label class="radio-card" onclick="selectRadio(this,'radar')">
+              <input type="radio" name="radar" value="Em processo">
+              <span>⏳ Em processo</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Plano Free – destaque -->
+        <div style="background:linear-gradient(135deg,#f0fdf9,#e6f7f1);border:1.5px solid #b2edda;border-radius:12px;padding:14px 16px;margin-bottom:1rem">
+          <div style="font-size:11px;font-weight:700;color:#00A878;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">🎁 Plano Gratuito incluso</div>
+          <div style="display:flex;flex-direction:column;gap:5px">
+            <div style="font-size:12.5px;color:#253A56;display:flex;align-items:center;gap:7px"><span style="color:#00A878;font-weight:700">✓</span> Até <strong>5 estudos por mês</strong></div>
+            <div style="font-size:12.5px;color:#253A56;display:flex;align-items:center;gap:7px"><span style="color:#00A878;font-weight:700">✓</span> Visualização completa dos resultados</div>
+            <div style="font-size:12.5px;color:#253A56;display:flex;align-items:center;gap:7px"><span style="color:#00A878;font-weight:700">✓</span> Exportação PDF e Excel</div>
+            <div style="font-size:12.5px;color:#253A56;display:flex;align-items:center;gap:7px"><span style="color:#00A878;font-weight:700">✓</span> Estudos salvos na nuvem</div>
+          </div>
+        </div>
+
+        <div class="terms-wrap">
+          <input type="checkbox" id="termos">
+          <label for="termos">
+            Li e aceito os <a href="#" target="_blank">Termos de Uso</a> e a
+            <a href="#" target="_blank">Política de Privacidade</a> do ImportaCerto.
+          </label>
+        </div>
+
+        <div id="cadastro-error-3" class="error-msg" style="margin-top:12px"></div>
+
+        <div class="btn-row">
+          <button class="btn-back" onclick="irParaStep(2)" type="button">← Voltar</button>
+          <button class="btn-primary" id="btn-cadastrar" onclick="__doCadastro()" type="button">
+            Criar minha conta
+          </button>
+        </div>
+      </div>
+
+    </div><!-- /card-body -->
+
+    <div class="card-footer">
+      <span class="footer-text">Já tem uma conta?</span>
+      <a class="btn-ghost" href="login.html">Fazer login</a>
+    </div>
+
+  </div><!-- /card -->
+
+  <!-- ══ TELA DE SUCESSO ══ -->
+  <div class="card" id="success-card" style="display:none">
+    <div class="success-screen">
+      <div class="success-icon">✓</div>
+      <div class="success-title">Conta criada, <span class="success-nome"></span>! 🎉</div>
+      <div class="success-desc">
+        Seu acesso ao ImportaCerto está ativo.<br>
+        Enviamos um e-mail de confirmação — verifique sua caixa de entrada.<br><br>
+        Você será redirecionado automaticamente…
+      </div>
+      <div class="success-plan">
+        <div class="success-plan-title">Plano Gratuito ativado</div>
+        <div class="success-plan-item">Até 5 estudos por mês</div>
+        <div class="success-plan-item">Exportação PDF e Excel</div>
+        <div class="success-plan-item">Estudos salvos na nuvem</div>
+      </div>
+      <button class="btn-primary" onclick="window.location.href='index.html'" type="button" style="margin-top:.5rem">
+        Acessar agora →
+      </button>
+    </div>
+  </div>
+
+  <div class="global-footer">© 2026 ImportaCerto · Estudo de Viabilidade de Importação</div>
+
+</div><!-- /screen -->
+
+<script>
+// ── Navegação entre etapas ──
+let currentStep = 1;
+
+function irParaStep(n) {
+  document.getElementById('step-' + currentStep).classList.remove('active');
+  document.getElementById('dot-' + currentStep).classList.remove('active');
+  document.getElementById('dot-' + currentStep).classList.add('done');
+  currentStep = n;
+  document.getElementById('step-' + n).classList.add('active');
+  // Atualiza dots
+  for(let i=1;i<=3;i++){
+    const dot = document.getElementById('dot-'+i);
+    dot.classList.remove('active','done');
+    if(i < n) dot.classList.add('done');
+    if(i === n) dot.classList.add('active');
+  }
+  // Scroll to top do card
+  document.getElementById('main-card').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function validarStep1() {
+  const nome  = document.getElementById('nome').value.trim();
+  const email = document.getElementById('email').value.trim();
+  const senha = document.getElementById('senha').value;
+  const senha2= document.getElementById('senha2').value;
+  const errEl = document.getElementById('cadastro-error');
+
+  if (!nome)             { showErrLocal(errEl,'Informe seu nome completo.'); return; }
+  if (!email || !email.includes('@')) { showErrLocal(errEl,'Informe um e-mail válido.'); return; }
+  if (senha.length < 6)  { showErrLocal(errEl,'A senha deve ter pelo menos 6 caracteres.'); return; }
+  if (senha !== senha2)  { showErrLocal(errEl,'As senhas não coincidem.'); return; }
+
+  errEl.style.display = 'none';
+  irParaStep(2);
+}
+
+function showErrLocal(el, msg) { el.textContent = msg; el.style.display = 'flex'; }
+
+// ── Radio cards ──
+function selectRadio(label, name) {
+  document.querySelectorAll('#'+name+'-group .radio-card').forEach(l => l.classList.remove('selected'));
+  label.classList.add('selected');
+}
+
+// ── Força da senha ──
+function checkSenha(val) {
+  const bar  = document.getElementById('pwd-bar');
+  const hint = document.getElementById('pwd-hint');
+  let score = 0;
+  if(val.length >= 6)  score++;
+  if(val.length >= 10) score++;
+  if(/[A-Z]/.test(val)) score++;
+  if(/[0-9]/.test(val)) score++;
+  if(/[^A-Za-z0-9]/.test(val)) score++;
+  const colors = ['#C0392B','#E67E22','#F0A500','#2ECC71','#00A878'];
+  const hints  = ['Muito fraca','Fraca','Razoável','Boa','Forte'];
+  const pct    = [20,40,60,80,100];
+  const idx    = Math.min(score, 4);
+  bar.style.width    = pct[idx] + '%';
+  bar.style.background = colors[idx];
+  hint.textContent   = val ? hints[idx] : 'Digite uma senha';
+}
+
+// ── Toggle senha ──
+let senhaVisivel = false;
+function toggleSenha() {
+  senhaVisivel = !senhaVisivel;
+  const input = document.getElementById('senha');
+  const btn   = document.getElementById('eye-btn');
+  input.type  = senhaVisivel ? 'text' : 'password';
+  btn.innerHTML = senhaVisivel
+    ? `<svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`
+    : `<svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
+  input.focus();
+}
+</script>
+
+</body>
+</html>
