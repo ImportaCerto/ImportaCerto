@@ -589,7 +589,14 @@ textarea{resize:vertical;min-height:52px;font-size:11px}
   <div class="sh"><div class="sd"></div><span>Frete e câmbio</span></div>
   <div class="g4">
     <div><label>Frete total (USD)</label><input id="f_frete" type="number" step="0.01" placeholder="0.00"></div>
-    <div><label>Taxa cambial (R$/USD)</label><input id="f_cambio" type="number" step="0.0001" placeholder="5.5576"></div>
+    <div>
+      <label>Taxa cambial (R$/USD)</label>
+      <div class="ptax-wrap">
+        <input id="f_cambio" type="number" step="0.0001" placeholder="5.5576">
+        <button class="btn-ptax" id="btn-ptax" onclick="buscarPTAX()" title="Buscar PTAX do dia no Banco Central">📡 PTAX</button>
+      </div>
+      <div class="ptax-info" id="ptax-info"></div>
+    </div>
     <div><label>Qtd. total (todas NCMs)</label><input id="f_qtd" type="number" step="1" value="1"></div>
     <div>
       <label>N&#186; de Adi&#231;&#245;es (Siscomex)</label>
@@ -995,7 +1002,7 @@ function addItem(cf){
     +'</div>'
     +'<div class="g2">'
       +'<div><label>NCM &nbsp;<a href="https://www.ncmweb.com.br" target="_blank" class="ncm-link">&#128279; Consultar F5 Comex</a></label>'
-        +'<input type="text" id="i_ncm-'+id+'" placeholder="Ex: 85322590" maxlength="10" value="'+(cf.ncm||'')+'"></div>'
+        +'<input type="text" id="i_ncm-'+id+'" placeholder="Ex: 85322590" maxlength="10" value="'+(cf.ncm||'')+'" oninput="onNcmInput('+id+',this.value)">'        +'<div class="ncm-status" id="ncm-status-'+id+'"></div>'        +'<button class="ncm-fill-btn" id="ncm-fill-btn-'+id+'" onclick="preencherAliquotas('+id+')">✔ Preencher alíquotas automático</button>'        +'</div>'
       +'<div><label>Valor FOB (USD)</label><input type="number" id="i_fob-'+id+'" step="0.01" placeholder="0.00" value="'+(cf.fob||'')+'"></div>'
     +'</div>'
     +'<div class="g5">'
@@ -1701,6 +1708,162 @@ async function excluirEstudo(id){
   }
 }
 
+
+
+/* =========================================================
+   BANCO NCM — consulta automática de alíquotas no Firestore
+   Coleção: ncm_aliquotas
+   Campos do documento: ii, ipi, pis, cofins, descricao
+   ID do doc: NCM de 8 dígitos (ex: "85322590")
+   ========================================================= */
+var _ncmCache = {}; // cache em memória para evitar consultas repetidas
+
+async function onNcmInput(id, valor) {
+  var ncm = valor.replace(/[^0-9]/g,'');
+  var statusEl = document.getElementById('ncm-status-'+id);
+  var fillBtn  = document.getElementById('ncm-fill-btn-'+id);
+
+  // Limpar estado anterior
+  if(statusEl){ statusEl.className='ncm-status'; statusEl.textContent=''; }
+  if(fillBtn)  { fillBtn.classList.remove('show'); }
+  if(fillBtn)  { fillBtn._ncmData = null; }
+
+  // Só busca quando tiver 8 dígitos
+  if(ncm.length < 8) return;
+
+  // Checar cache
+  var ncm8 = ncm.substring(0,8);
+  if(_ncmCache[ncm8] !== undefined) {
+    _aplicarResultadoNCM(id, ncm8, _ncmCache[ncm8]);
+    return;
+  }
+
+  // Mostrar loading
+  if(statusEl){ statusEl.className='ncm-status loading'; statusEl.textContent='🔍 Consultando banco de NCMs…'; }
+
+  try {
+    if(!window.__buscarNCM) throw new Error('Módulo NCM não disponível');
+    var dados = await window.__buscarNCM(ncm8);
+    _ncmCache[ncm8] = dados; // guardar no cache (null = não encontrado)
+    _aplicarResultadoNCM(id, ncm8, dados);
+  } catch(e) {
+    if(statusEl){ statusEl.className='ncm-status err'; statusEl.textContent='Erro ao consultar: '+e.message; }
+  }
+}
+
+function _aplicarResultadoNCM(id, ncm8, dados) {
+  var statusEl = document.getElementById('ncm-status-'+id);
+  var fillBtn  = document.getElementById('ncm-fill-btn-'+id);
+
+  if(!dados) {
+    if(statusEl){ statusEl.className='ncm-status err'; statusEl.textContent='NCM '+ ncm8 +' não encontrado no banco. Preencha manualmente.'; }
+    return;
+  }
+
+  var desc = dados.descricao ? ' — '+dados.descricao : '';
+  if(statusEl){
+    statusEl.className='ncm-status ok';
+    statusEl.textContent='✔ NCM encontrado'+ desc
+      +' | II: '+dados.ii+'% · IPI: '+dados.ipi+'% · PIS: '+dados.pis+'% · COFINS: '+dados.cofins+'%';
+  }
+  if(fillBtn){
+    fillBtn.classList.add('show');
+    fillBtn._ncmData = dados;
+  }
+}
+
+function preencherAliquotas(id) {
+  var fillBtn = document.getElementById('ncm-fill-btn-'+id);
+  if(!fillBtn || !fillBtn._ncmData) return;
+  var d = fillBtn._ncmData;
+  var set = function(fieldId, val){
+    var el = document.getElementById(fieldId);
+    if(el && (val !== null && val !== undefined)) el.value = val;
+  };
+  set('i_ii-'+id,    d.ii    !== undefined ? d.ii    : '');
+  set('i_ipi-'+id,   d.ipi   !== undefined ? d.ipi   : '');
+  set('i_pis-'+id,   d.pis   !== undefined ? d.pis   : '');
+  set('i_cof-'+id,   d.cofins!== undefined ? d.cofins: '');
+  if(d.icms !== undefined && d.icms !== null) set('i_icms-'+id, d.icms);
+  // Preencher descrição se o campo estiver vazio
+  var descEl = document.getElementById('i_desc-'+id);
+  if(descEl && !descEl.value && d.descricao) descEl.value = d.descricao;
+  // Feedback visual breve no botão
+  fillBtn.textContent = '✔ Preenchido!';
+  fillBtn.style.background = '#E1F5EE';
+  fillBtn.style.color = '#0F6E56';
+  setTimeout(function(){
+    fillBtn.textContent = '✔ Preencher alíquotas automático';
+    fillBtn.style.background = '';
+    fillBtn.style.color = '';
+  }, 2000);
+}
+
+/* =========================================================
+   PTAX AUTOMÁTICA — API pública do Banco Central do Brasil
+   Endpoint: ptax.bcb.gov.br (sem necessidade de autenticação)
+   ========================================================= */
+async function buscarPTAX() {
+  var btn  = document.getElementById('btn-ptax');
+  var info = document.getElementById('ptax-info');
+  var inp  = document.getElementById('f_cambio');
+  if(!btn || !inp) return;
+
+  btn.disabled = true;
+  btn.textContent = '⏳ Buscando…';
+  if(info) info.textContent = '';
+
+  try {
+    // Tentar hoje, se não retornar (feriado/fim de semana) recuar até 5 dias úteis
+    var ptax = null;
+    var dataUsada = '';
+    for(var i = 0; i <= 5; i++) {
+      var d = new Date();
+      d.setDate(d.getDate() - i);
+      // Pular sábado (6) e domingo (0)
+      if(d.getDay() === 0) { d.setDate(d.getDate()-1); }
+      if(d.getDay() === 6) { d.setDate(d.getDate()-1); }
+      var mm = String(d.getMonth()+1).padStart(2,'0');
+      var dd = String(d.getDate()).padStart(2,'0');
+      var yyyy = d.getFullYear();
+      var dataStr = mm+'-'+dd+'-'+yyyy; // formato MM-DD-YYYY da API BCB
+      var dataExib = dd+'/'+mm+'/'+yyyy;
+
+      var url = 'https://ptax.bcb.gov.br/ptax_internet/api/v1/cotacaoMoedaDia/USD/'+dataStr;
+      var resp = await fetch(url);
+      if(!resp.ok) continue;
+      var json = await resp.json();
+      if(json.value && json.value.length > 0) {
+        // Pegar a última cotação do dia (compra)
+        var cot = json.value[json.value.length-1];
+        ptax = cot.cotacaoCompra;
+        dataUsada = dataExib + ' ' + (cot.dataHoraCotacao||'').substring(11,16);
+        break;
+      }
+    }
+
+    if(ptax) {
+      inp.value = parseFloat(ptax).toFixed(4);
+      if(info) {
+        info.textContent = '📡 PTAX compra em ' + dataUsada + ' — fonte: BCB';
+        info.style.color = '#0F6E56';
+      }
+    } else {
+      if(info) {
+        info.textContent = 'PTAX indisponível no momento. Preencha manualmente.';
+        info.style.color = '#791F1F';
+      }
+    }
+  } catch(e) {
+    if(info) {
+      info.textContent = 'Erro ao buscar PTAX: '+e.message;
+      info.style.color = '#791F1F';
+    }
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '📡 PTAX';
+  }
+}
 
 /* =========================================================
    VALIDAÇÃO ESPECIALIZADA – Lead capture + Firestore
