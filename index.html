@@ -580,7 +580,7 @@ textarea{resize:vertical;min-height:52px;font-size:11px}
     <div><label>Porto de Destino</label><input id="f_pdest" placeholder="Ex: PORTO DE SANTOS - BR"></div>
   </div>
   <div><label>Observações</label>
-    <textarea id="f_obs" placeholder="* OS VALORES ALTERAM CONFORME A VARIAÇÃO DA TAXA CAMBIAL."></textarea>
+    <textarea id="f_obs" placeholder="Informe observações relevantes sobre esta operação..."></textarea>
   </div>
 </div>
 
@@ -862,7 +862,47 @@ textarea{resize:vertical;min-height:52px;font-size:11px}
     </div>
   </div>
 </div>
+
+<!-- ══ AVISOS DA SIMULAÇÃO + BOTÃO VALIDAÇÃO ══ -->
+<div id="area-pos-resultado" style="display:none">
+  <div class="avisos-simulacao">
+    <div class="av-title">⚠️ Avisos da Simulação</div>
+    <ul>
+      <li>Os valores poderão variar conforme a taxa cambial vigente na data do registro da DI/DUIMP.</li>
+      <li>Os tributos foram calculados com base nas informações fornecidas e possuem caráter estimativo.</li>
+      <li>Benefícios fiscais estaduais, regimes especiais, ex-tarifários, medidas antidumping e exigências de órgãos anuentes não estão contemplados automaticamente nesta simulação.</li>
+    </ul>
+  </div>
+  <button class="btn-validacao" onclick="abrirModalValidacao()">
+    🚀 Solicitar validação da operação
+  </button>
+</div>
 </div><!-- /page -->
+
+
+<!-- MODAL VALIDAÇÃO ESPECIALIZADA -->
+<div class="modal-bg modal-validacao" id="modal-validacao">
+  <div class="modal-box-v">
+    <div id="validacao-form-area">
+      <h3>🔍 Solicitar Validação da Operação</h3>
+      <p class="sub">Nossa equipe especializada analisará o estudo e entrará em contato. O serviço é prestado pela equipe ImportaCerto.</p>
+      <label>Descreva sua dúvida ou necessidade <span style="font-weight:400;color:#aab3bd">(opcional)</span></label>
+      <textarea id="val-observacao" placeholder="Ex: Gostaria de validar a aplicação do ICMS reduzido para este NCM no estado de destino..."></textarea>
+      <button class="btn-enviar-analise" id="btn-enviar-analise" onclick="enviarValidacao()">
+        📩 Enviar para análise
+      </button>
+      <button class="mbtn mbtn-cancel" style="width:100%;margin-top:8px" onclick="fecharModalValidacao()">Cancelar</button>
+    </div>
+    <div class="validacao-sucesso" id="validacao-sucesso">
+      <div class="vs-icon">✅</div>
+      <p><strong>Solicitação enviada com sucesso!</strong><br><br>
+      Recebemos sua solicitação referente ao estudo de viabilidade.<br>
+      Nossa equipe analisará as informações e entrará em contato em breve.<br><br>
+      <span style="color:#00A878;font-weight:600">Fique atento ao seu e-mail.</span></p>
+      <button class="btn-enviar-analise" style="margin-top:16px" onclick="fecharModalValidacao()">Fechar</button>
+    </div>
+  </div>
+</div>
 
 <!-- MODAL EXPORTAR -->
 <div class="modal-bg" id="modal">
@@ -925,8 +965,11 @@ function gs(id){return document.getElementById(id)&&document.getElementById(id).
 function toggleReducao(id){
   var tp=document.getElementById('i_icmstp-'+id);
   var wrap=document.getElementById('i_red_wrap-'+id);
+  var alerta=document.getElementById('i_icms_alerta-'+id);
   if(!tp||!wrap)return;
-  wrap.style.display=tp.value==='reducao'?'':'none';
+  var isReducao=tp.value==='reducao';
+  wrap.style.display=isReducao?'':'none';
+  if(alerta)alerta.classList.toggle('show',isReducao);
   atualizarDivisor(id);
 }
 function atualizarDivisor(id){
@@ -969,7 +1012,7 @@ function addItem(cf){
           +'<option value="reducao"'+(cf.icmstp==='reducao'?' selected':'')+'">Redu&#231;&#227;o de Base &#8211; Conv. 52/91</option>'
         +'</select>'
       +'</div>'
-      +'<div id="i_red_wrap-'+id+'" style="'+(cf.icmstp==='reducao'?'':'display:none')+'">'
+      +'<div id="i_icms_alerta-'+id+'" class="icms-alerta">'        +'\u26a0\ufe0f A aplica\u00e7\u00e3o de benef\u00edcios fiscais depende da an\u00e1lise da mercadoria, NCM, estado de destino e legisla\u00e7\u00e3o vigente. Recomenda-se valida\u00e7\u00e3o pr\u00e9via com especialista.'      +'</div>'      +'<div id="i_red_wrap-'+id+'" style="'+(cf.icmstp==='reducao'?'':'display:none')+'">'
         +'<label>% Redu&#231;&#227;o <span style="font-size:10px;color:#aab3bd">(Ex: 8.80 ou 5.60)</span></label>'
         +'<input type="number" id="i_red-'+id+'" step="0.01" placeholder="Ex: 8.80" value="'+(cf.red||'')+'" oninput="atualizarDivisor('+id+')">'
         +'<small style="color:#3a9bd5;font-size:10px;display:block;margin-top:2px">Divisor: <strong id="i_div-'+id+'">&#8212;</strong></small>'
@@ -1294,11 +1337,21 @@ async function calcular(){
 
   document.getElementById('resultado').classList.add('show');
   document.getElementById('resultado').scrollIntoView({behavior:'smooth',block:'start'});
+  // Mostrar área de avisos pós-resultado e aviso estimativo
+  document.getElementById('area-pos-resultado').style.display='block';
+  var avisoEl=document.getElementById('aviso-estimativo');
+  if(avisoEl)avisoEl.style.display='block';
   // ── Incrementar contador de estudos ──
   window.__incrementarEstudo && window.__incrementarEstudo().catch(()=>{});
 }
 
-function limpar(){document.getElementById('resultado').classList.remove('show');window.scrollTo({top:0,behavior:'smooth'});}
+function limpar(){
+  document.getElementById('resultado').classList.remove('show');
+  document.getElementById('area-pos-resultado').style.display='none';
+  var avisoEl=document.getElementById('aviso-estimativo');
+  if(avisoEl)avisoEl.style.display='none';
+  window.scrollTo({top:0,behavior:'smooth'});
+}
 function abrirModal(){
   if(!document.getElementById('resultado').classList.contains('show')){alert('Calcule o estudo primeiro.');return;}
   const plano = window.__planoAtual || 'free';
@@ -1321,6 +1374,11 @@ function confirmarPDF(){
   document.getElementById('sec-resumo').style.display='none';
   document.getElementById('pdf-header').style.display='block';
   document.getElementById('pdf-footer').style.display='block';
+  // Ocultar área de avisos e mostrar rodapé comercial no PDF
+  var areaPosEl=document.getElementById('area-pos-resultado');
+  if(areaPosEl)areaPosEl.style.display='none';
+  var rodapeComEl=document.getElementById('pdf-rodape-comercial');
+  if(rodapeComEl)rodapeComEl.style.display='block';
   // Clonar grand-total, unit-cards e obs-box para aparecerem no PDF
   var pdfArea=document.getElementById('pdf-area');
   var pdfFooterEl=document.getElementById('pdf-footer');
@@ -1342,6 +1400,10 @@ function confirmarPDF(){
       document.getElementById('pdf-footer').style.display='none';
       document.getElementById('sec-rateio-desp').style.display='';
       document.getElementById('sec-resumo').style.display='';
+      var areaPosEl2=document.getElementById('area-pos-resultado');
+      if(areaPosEl2)areaPosEl2.style.display='block';
+      var rodapeComEl2=document.getElementById('pdf-rodape-comercial');
+      if(rodapeComEl2)rodapeComEl2.style.display='none';
     },500);
   },200);
 }
@@ -1636,6 +1698,76 @@ async function excluirEstudo(id){
     renderListaEstudos();
   }catch(e){
     alert('Não foi possível excluir o estudo: '+e.message);
+  }
+}
+
+
+/* =========================================================
+   VALIDAÇÃO ESPECIALIZADA – Lead capture + Firestore
+   ========================================================= */
+function abrirModalValidacao(){
+  document.getElementById('val-observacao').value='';
+  document.getElementById('validacao-form-area').style.display='block';
+  document.getElementById('validacao-sucesso').style.display='none';
+  document.getElementById('modal-validacao').classList.add('show');
+}
+function fecharModalValidacao(){
+  document.getElementById('modal-validacao').classList.remove('show');
+}
+
+async function enviarValidacao(){
+  var btn=document.getElementById('btn-enviar-analise');
+  btn.disabled=true;btn.textContent='Enviando…';
+
+  try{
+    // Montar dados do lead a partir do estudo atual
+    var obs=document.getElementById('val-observacao').value.trim();
+    var hoje=new Date().toISOString().split('T')[0];
+
+    // Gerar ID do estudo no padrão EVI-YYYY-NNNNN
+    var ano=new Date().getFullYear();
+    var rand=String(Math.floor(Math.random()*99999)).padStart(5,'0');
+    var estudoId='EVI-'+ano+'-'+rand;
+
+    // Coletar NCMs dos itens do formulário
+    var ncmList=[];
+    var itemEls=document.querySelectorAll('[id^="i_ncm-"]');
+    itemEls.forEach(function(el){if(el.value)ncmList.push(el.value);});
+
+    // Dados do usuário logado
+    var uid=window.__currentUser&&window.__currentUser.uid||'';
+    var email=window.__currentUser&&window.__currentUser.email||'';
+    var nome=window.__currentUser&&window.__currentUser.displayName||'';
+    var empresa=document.getElementById('f_imp')?document.getElementById('f_imp').value:'';
+    var fob=document.getElementById('f_frete')&&lastCalc?'USD '+lastCalc.totalFOB_USD.toFixed(2):'';
+    var cambio=document.getElementById('f_cambio')?document.getElementById('f_cambio').value:'';
+
+    var lead={
+      userId:uid,
+      estudoId:estudoId,
+      nome:nome,
+      empresa:empresa,
+      email:email,
+      whatsapp:'',
+      ncms:ncmList,
+      valorFob:fob,
+      cambio:cambio,
+      observacao:obs,
+      status:'Novo',
+      dataSolicitacao:hoje
+    };
+
+    // Salvar no Firestore – coleção leads_especializados
+    await window.__salvarLeadEspecializado(lead);
+
+    // Mostrar sucesso
+    document.getElementById('validacao-form-area').style.display='none';
+    document.getElementById('validacao-sucesso').style.display='block';
+  }catch(e){
+    alert('Ocorreu um erro ao enviar sua solicitação. Tente novamente.');
+    console.error(e);
+  }finally{
+    btn.disabled=false;btn.textContent='📩 Enviar para análise';
   }
 }
 
