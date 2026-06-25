@@ -1829,43 +1829,40 @@ async function buscarPTAX() {
   var info = document.getElementById('ptax-info');
   var inp  = document.getElementById('f_cambio');
   if(!btn || !inp) return;
-
   btn.disabled = true;
   btn.textContent = '\u23f3 Buscando\u2026';
   if(info) info.textContent = '';
-
   try {
-    var ptax = null;
-    var dataUsada = '';
-
-    // Fonte 1: OData BCB (CORS liberado pelo banco central)
+    var ptax = null, dataUsada = '';
+    // Fonte 1: OData BCB (CORS liberado)
     for(var i = 0; i <= 5; i++) {
       var d = new Date();
       d.setDate(d.getDate() - i);
-      if(d.getDay() === 0) d.setDate(d.getDate()-1);
-      if(d.getDay() === 6) d.setDate(d.getDate()-1);
-      var mm   = String(d.getMonth()+1).padStart(2,'0');
-      var dd2  = String(d.getDate()).padStart(2,'0');
+      if(d.getDay()===0) d.setDate(d.getDate()-1);
+      if(d.getDay()===6) d.setDate(d.getDate()-1);
+      var mm = String(d.getMonth()+1).padStart(2,'0');
+      var dd2 = String(d.getDate()).padStart(2,'0');
       var yyyy = d.getFullYear();
-      var dataFmt  = mm+'-'+dd2+'-'+yyyy;
+      var dataFmt = mm+'-'+dd2+'-'+yyyy;
       var dataExib = dd2+'/'+mm+'/'+yyyy;
       try {
+        var enc = encodeURIComponent;
         var url = 'https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/'
           + 'CotacaoMoedaDia(moeda=@moeda,dataCotacao=@data)'
-          + '?@moeda='USD'&@data='' + dataFmt + '''
+          + '?@moeda=' + enc("'USD'")
+          + '&@data=' + enc("'"+dataFmt+"'")
           + '&$top=1&$orderby=dataHoraCotacao%20desc&$format=json&$select=cotacaoCompra,dataHoraCotacao';
         var resp = await fetch(url);
         if(!resp.ok) continue;
-        var json = await resp.json();
-        if(json.value && json.value.length > 0) {
-          ptax = json.value[0].cotacaoCompra;
-          dataUsada = dataExib + ' ' + (json.value[0].dataHoraCotacao||'').substring(11,16);
+        var jdata = await resp.json();
+        if(jdata.value && jdata.value.length > 0) {
+          ptax = jdata.value[0].cotacaoCompra;
+          dataUsada = dataExib + ' ' + (jdata.value[0].dataHoraCotacao||'').substring(11,16);
           break;
         }
       } catch(e2) { continue; }
     }
-
-    // Fonte 2: AwesomeAPI (fallback)
+    // Fonte 2: AwesomeAPI (fallback, CORS OK)
     if(!ptax) {
       try {
         var r2 = await fetch('https://economia.awesomeapi.com.br/json/last/USD-BRL');
@@ -1876,33 +1873,20 @@ async function buscarPTAX() {
         }
       } catch(e3) {}
     }
-
     if(ptax) {
       inp.value = parseFloat(ptax).toFixed(4);
-      if(info) {
-        info.textContent = '\ud83d\udce1 PTAX compra em ' + dataUsada + ' \u2014 fonte: BCB';
-        info.style.color = '#0F6E56';
-      }
+      if(info){ info.textContent = '\ud83d\udce1 PTAX compra em ' + dataUsada + ' \u2014 fonte: BCB'; info.style.color='#0F6E56'; }
     } else {
-      if(info) {
-        info.textContent = 'PTAX indispon\u00edvel no momento. Preencha manualmente.';
-        info.style.color = '#791F1F';
-      }
+      if(info){ info.textContent = 'PTAX indispon\u00edvel. Preencha manualmente.'; info.style.color='#791F1F'; }
     }
   } catch(e) {
-    if(info) {
-      info.textContent = 'Erro ao buscar PTAX: '+e.message;
-      info.style.color = '#791F1F';
-    }
+    if(info){ info.textContent = 'Erro: '+e.message; info.style.color='#791F1F'; }
   } finally {
     btn.disabled = false;
-    btn.textContent = '📡 PTAX';
+    btn.textContent = '\ud83d\udce1 PTAX';
   }
 }
 
-/* =========================================================
-   VALIDAÇÃO ESPECIALIZADA – Lead capture + Firestore
-   ========================================================= */
 function abrirModalValidacao(){
   document.getElementById('val-observacao').value='';
   document.getElementById('validacao-form-area').style.display='block';
